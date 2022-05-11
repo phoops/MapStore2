@@ -8,7 +8,7 @@
 import React from 'react';
 
 import PropTypes from 'prop-types';
-import src from '../assets/img/mapstorelogo.png';
+import src from '../assets/img/logo-regione-toscana.png';
 
 import assign from 'object-assign';
 import tooltip from '../../components/misc/enhancers/tooltip';
@@ -66,8 +66,8 @@ class NavMenu extends React.Component {
 
     static defaultProps = {
         src: src,
-        link: 'https://www.geosolutionsgroup.com/',
-        label: 'GeoSolutions',
+        link: 'https://www.regione.toscana.it',
+        label: 'Regione Toscana',
         style: {
             position: "absolute",
             width: "124px",
@@ -97,6 +97,7 @@ class NavMenu extends React.Component {
             key={idx}
             target="_blank"
             href={isString(item.href) && !item.linkId && item.href || ""}
+            className="rt-nav-item"
             onClick={isString(item.linkId) ? () => scrollIntoViewId(trimStart(item.linkId, '#')) : () => { }}>
             {item.label}
         </NavItem>);
@@ -108,9 +109,10 @@ class NavMenu extends React.Component {
             target="_blank"
             tooltip={item.label}
             tooltipPosition="bottom"
+            className="rt-nav-item"
             href={isString(item.href) && !item.linkId && item.href || ""}
             onClick={isString(item.linkId) ? () => scrollIntoViewId(trimStart(item.linkId, '#')) : () => { }}>
-            {item.glyph && <Glyphicon glyph={item.glyph} /> || item.img}
+            {item.glyph && <Glyphicon glyph={item.glyph} /> || <div className="logo-image-wrapper">{item.img}</div>}
         </NavItemT>);
     };
 
