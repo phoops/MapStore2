@@ -255,7 +255,7 @@ example
                     "ms-main-color": "#000000",
                     "ms-main-bg": "#F4F4F4",
                     "ms-primary-contrast": "#FFFFFF",
-                    "ms-primary": "#E01021",
+                    "ms-primary": "#E2001A",
                     "ms-success-contrast": "#FFFFFF",
                     "ms-success": "#398439"
                 }
@@ -275,7 +275,7 @@ example
             "ms-main-color": "#000000",
             "ms-main-bg": "#F4F4F4",
             "ms-primary-contrast": "#FFFFFF",
-            "ms-primary": "#E01021",
+            "ms-primary": "#E2001A",
             "ms-success-contrast": "#FFFFFF",
             "ms-success": "#398439"
         }
