@@ -55,7 +55,7 @@ export default compose(
                 position: 'absolute',
                 zIndex: 50,
                 ...maximizedStyle,
-                marginTop: "4rem",
+                marginTop: "4rem"
             },
             ...maximizedProps
         });

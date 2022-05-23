@@ -48,7 +48,7 @@ export default {
                 position: 0,
                 label: props.label || 'Regione Toscana',
                 href: props.href || 'https://www.regione.toscana.it',
-                img: props.src && <img className="customer-logo" src={props.src} height="50" /> || <img class="customer-logo" src={src} height="50" />,
+                img: props.src && <img className="customer-logo" src={props.src} height="50" /> || <img className="customer-logo" src={src} height="50" />,
                 logo: true
             })
         }

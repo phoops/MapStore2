@@ -10,7 +10,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Grid, Row, Col } from 'react-bootstrap';
 import src from "./attribution/geosolutions-brand.png";
-import HTML from '../../components/I18N/HTML';
 
 /**
  * Footer plugin, section of the homepage.
@@ -45,15 +44,15 @@ class Footer extends React.Component {
     };
 
     render() {
-        const { href, ...logo } = this.props.logo || {};
-        const image = (
-            <img
-                src={logo.src}
-                width={logo.width || 'auto'}
-                height={logo.height || 'auto'}
-                title={logo.title || ''}
-                alt={logo.alt || ''} />
-        );
+        // const { href, ...logo } = this.props.logo || {};
+        // const image = (
+        //     <img
+        //         src={logo.src}
+        //         width={logo.width || 'auto'}
+        //         height={logo.height || 'auto'}
+        //         title={logo.title || ''}
+        //         alt={logo.alt || ''} />
+        // );
         return (
             <Grid>
                 {/* {logo && logo.src && <Row>
@@ -77,7 +76,7 @@ class Footer extends React.Component {
                             <span className="rt-footer-info">Partita IVA 01386030488</span>
                             <div className="rt-footer-logo">
                                 <picture>
-                                    <img alt="Logo Regione Toscana" src="https://www.regione.toscana.it/o/regione-toscana-theme/images/logo-regione-footer.png" srcset="https://www.regione.toscana.it/o/regione-toscana-theme/images/logo-regione-footer@2x.png 2x" height="74" />
+                                    <img alt="Logo Regione Toscana" src="https://www.regione.toscana.it/o/regione-toscana-theme/images/logo-regione-footer.png" height="74" />
                                 </picture>
                             </div>
                         </div>
