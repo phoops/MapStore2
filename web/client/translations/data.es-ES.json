@@ -160,7 +160,8 @@
                     "title": "Error",
                     "message": "No se pudo recuperar el formato"
                 }
-            }
+            },
+            "forceProxy": "Forzar proxy"
         },
         "longitude": "Lon",
         "latitude": "Lat",
@@ -486,6 +487,8 @@
             "toggleGroupVisibility": "Alternar la visibilidad del grupo",
             "displayLegendAndTools": "Mostrar la leyenda",
             "zoomToLayerExtent": "Zoom a la extensión de la capa",
+            "addAnnotations": "Agregar anotaciones",
+            "editAnnotations": "Editar anotaciones",
             "addLayer": "Añadir capa",
             "addLayerToGroup": "Añadir capa al grupo seleccionado",
             "addGroup": "Añadir grupo",
@@ -535,6 +538,7 @@
             "filterIconDisabled": "Habilitar filtro de capa",
             "notVisibleZoomIn": "La capa no es visible porque está fuera de los límites de resolución. Acercar para mostrar la capa",
             "notVisibleZoomOut": "La capa no es visible porque está fuera de los límites de resolución. Alejar para mostrar la capa",
+            "notVisibleSwitchTo3D": "Cambie al modo de mapa 3D para ver esta capa",
             "refreshOptions": {
                 "bbox": "Refrescar BBOX",
                 "search": "Refrescar las opciones de búsqueda",
@@ -653,7 +657,8 @@
             "previewFormatUnsupported": "Formato no compatible para la vista previa",
             "projection": "Sistema de coordenadas",
             "projectionmismatch": "Falta de coincidencia del sistema de coordenadas entre el mapa impreso y en pantalla",
-            "graticule": "agregar cuadrícula con etiquetas"
+            "graticule": "agregar cuadrícula con etiquetas",
+            "additionalLayers": "Incluir superposiciones"
         },
         "backgroundSwitcher":{
             "tooltip": "Selección del fondo"
@@ -1464,12 +1469,16 @@
                 "label": "Establecer límite de visibilidad",
                 "tooltip": "Aplica automáticamente los límites de visibilidad sugeridos por el servidor"
             },
-          "domainAliases": {
-            "title": "Alias de dominio",
-            "helpTooltip": "Esta opción se utiliza para dividir el contenido en varios subdominios",
-            "addAliasTooltip": "Agregar alias",
-            "removeAliasTooltip": "Eliminar alias"
-          }
+            "domainAliases": {
+              "title": "Alias de dominio",
+              "helpTooltip": "Esta opción se utiliza para dividir el contenido en varios subdominios",
+              "addAliasTooltip": "Agregar alias",
+              "removeAliasTooltip": "Eliminar alias"
+            },
+            "allowUnsecureLayers": {
+              "label": "Permitir capas no seguras",
+              "tooltip": "Agregar una capa al mapa con esta opción habilitada obliga a la aplicación a aplicar proxy"
+            }
         },
         "uploader": {
             "filename": "Nombre del fichero",
@@ -3462,6 +3471,9 @@
             "noDataForPosition": "no hay datos de Street View para esta",
             "unknownError": "error desconocido, ver consola"
           }
+        },
+        "sidebarMenu": {
+          "showMoreItems": "Mostrar más elementos"
         }
     }
 }

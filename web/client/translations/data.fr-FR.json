@@ -160,7 +160,8 @@
                     "title": "Erreur",
                     "message": "Échec de la récupération du format"
                 }
-            }
+            },
+            "forceProxy": "Forcer le proxy"
         },
         "longitude": "Lon",
         "latitude": "Lat",
@@ -486,6 +487,8 @@
             "toggleGroupVisibility": "Changer la visibilité du groupe",
             "displayLegendAndTools": "Afficher la légende",
             "zoomToLayerExtent": "Zoomer sur l'étendue de la couche",
+            "addAnnotations": "Ajouter des annotations",
+            "editAnnotations": "Modifier les annotations",
             "addLayer": "Ajouter une couche",
             "addLayerToGroup": "Ajouter une couche au groupe sélectionné",
             "addGroup": "Ajouter un groupe",
@@ -535,6 +538,7 @@
             "filterIconDisabled": "Activer le filtre de couche",
             "notVisibleZoomIn": "Le calque n'est pas visible car il est en dehors des limites de résolution. Zoomez pour afficher le calque",
             "notVisibleZoomOut": "Le calque n'est pas visible car il est en dehors des limites de résolution. Faites un zoom arrière pour afficher le calque",
+            "notVisibleSwitchTo3D": "Passer en mode carte 3D pour voir cette couche",
             "refreshOptions": {
                 "bbox": "Mettre à jour la BBOX",
                 "search": "Mettre à jour les options de recherche",
@@ -653,7 +657,8 @@
             "previewFormatUnsupported": "Format non pris en charge pour l'aperçu",
             "projection": "Système de coordonnées",
             "projectionmismatch": "Non-concordance du système de coordonnées entre la carte imprimée et la carte à l'écran",
-            "graticule": "ajouter une grille avec des étiquettes"
+            "graticule": "ajouter une grille avec des étiquettes",
+            "additionalLayers": "Inclure les superpositions"
         },
         "backgroundSwitcher": {
             "tooltip": "Sélection du fond de plan"
@@ -1465,12 +1470,16 @@
                 "label": "Définir la limite de visibilité",
                 "tooltip": "Applique automatiquement les limites de visibilité suggérées par le serveur"
             },
-          "domainAliases": {
-            "title": "Alias de domaine",
-            "helpTooltip": "Cette option est utilisée pour diviser le contenu sur plusieurs sous-domaines",
-            "addAliasTooltip": "Ajouter un alias",
-            "removeAliasTooltip": "Supprimer l'alias"
-          }
+            "domainAliases": {
+              "title": "Alias de domaine",
+              "helpTooltip": "Cette option est utilisée pour diviser le contenu sur plusieurs sous-domaines",
+              "addAliasTooltip": "Ajouter un alias",
+              "removeAliasTooltip": "Supprimer l'alias"
+            },
+            "allowUnsecureLayers": {
+              "label": "Autoriser les couches non sécurisées",
+              "tooltip": "L'ajout d'une couche à la carte avec cette option activée force l'application à appliquer un proxy"
+            }
         },
         "uploader": {
             "filename": "Nom du fichier",
@@ -3463,6 +3472,9 @@
             "noDataForPosition": "pas de données Street View pour cette position",
             "unknownError": "erreur inconnue, voir console"
           }
+        },
+        "sidebarMenu": {
+          "showMoreItems": "Afficher plus d'éléments"
         }
     }
 }
