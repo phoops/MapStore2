@@ -518,7 +518,8 @@
         },
         "addgroup": {
             "addbtn": "Hinzufügen",
-            "groupName": "Gruppenname"
+            "groupName": "Gruppenname",
+            "groupWhitExclusiveVisibility": "Layer-Sichtbarkeit, die sich gegenseitig ausschließt"
         },
         "toc": {
             "toggleLayerVisibility": "Ebenensichtbarkeit umschalten",

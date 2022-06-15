@@ -480,7 +480,8 @@
         },
         "addgroup": {
             "addbtn": "Ajouter",
-            "groupName": "Nom de groupe"
+            "groupName": "Nom de groupe",
+            "groupWhitExclusiveVisibility": "Visibilité des calques mutuellement exclusive"
         },
         "toc": {
             "toggleLayerVisibility": "Changer la visibilité de la couche",

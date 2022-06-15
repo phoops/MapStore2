@@ -480,7 +480,8 @@
         },
         "addgroup": {
             "addbtn": "Añadir",
-            "groupName": "Nombre del grupo"
+            "groupName": "Nombre del grupo",
+            "groupWhitExclusiveVisibility": "Visibilidad de capas mutuamente excluyentes"
         },
         "toc": {
             "toggleLayerVisibility": "Activar/desactivar visibilidad de la capa",

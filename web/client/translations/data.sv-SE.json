@@ -471,7 +471,8 @@
         },
         "addgroup": {
             "addbtn": "Lägg till",
-            "groupName": "Gruppnamn"
+            "groupName": "Gruppnamn",
+            "groupWhitExclusiveVisibility": "Ömsesidigt exklusiva lagersynlighet"
         },
         "toc": {
             "toggleLayerVisibility": "Släck/tänd lager",

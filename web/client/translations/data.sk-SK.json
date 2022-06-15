@@ -501,7 +501,8 @@
         },
         "addgroup": {
             "addbtn": "Pridať",
-            "groupName": "Meno skupiny"
+            "groupName": "Meno skupiny",
+            "groupWhitExclusiveVisibility": "Vzájomne sa vylučujúca viditeľnosť vrstiev"
         },
         "toc": {
             "toggleLayerVisibility": "Prepnúť viditeľnosť vrstvy",

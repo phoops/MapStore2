@@ -18,7 +18,8 @@
         "about_ul0_li1": "MapPublisher được phát triển để tạo ra, lưu và chia sẻ một cách đơn giản và trực quan các bản đồ và tập hợp được tạo ra bằng cách chọn nội dung từ các nguồn nổi tiếng như Google Maps và OpenStreetMap hoặc từ các dịch vụ được cung cấp bởi các tổ chức sử dụng giao thức mở như OGC WMS, WFS, WMTS hoặc TMS và như vậy. Để biết thêm thông tin, hãy kiểm tra",
         "addgroup": {
             "addbtn": "Thêm vào",
-            "groupName": "Tên nhóm"
+            "groupName": "Tên nhóm",
+            "groupWhitExclusiveVisibility": "Khả năng hiển thị lớp loại trừ lẫn nhau"
         },
         "Forbidden": "Forbidden",
         "annotations": {

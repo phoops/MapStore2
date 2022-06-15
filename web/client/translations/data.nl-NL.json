@@ -492,7 +492,8 @@
         },
         "addgroup": {
             "addbtn": "Toevoegen",
-            "groupName": "Groepsnaam"
+            "groupName": "Groepsnaam",
+            "groupWhitExclusiveVisibility": "Wederzijds exclusieve laagzichtbaarheid"
         },
         "toc": {
             "toggleLayerVisibility": "Wijzig zichtbaarheid van de laag",

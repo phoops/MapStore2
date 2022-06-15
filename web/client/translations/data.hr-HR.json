@@ -390,7 +390,8 @@
         },
         "addgroup": {
             "addbtn": "Dodaj",
-            "groupName": "Naziv grupe"
+            "groupName": "Naziv grupe",
+            "groupWhitExclusiveVisibility": "Egymást kizáró rétegláthatóság"
         },
         "toc": {
             "toggleLayerVisibility": "Izmijeni vidljivost sloja",

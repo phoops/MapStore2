@@ -480,7 +480,8 @@
         },
         "addgroup": {
             "addbtn": "Add",
-            "groupName": "Group name"
+            "groupName": "Group name",
+            "groupWhitExclusiveVisibility": "Mutually exclusive layer visibility"
         },
         "toc": {
             "toggleLayerVisibility": "Toggle layer visibility",

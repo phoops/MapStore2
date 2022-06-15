@@ -405,7 +405,8 @@
     },
     "addgroup": {
       "addbtn": "Lisää",
-      "groupName": "Ryhmän nimi"
+      "groupName": "Ryhmän nimi",
+      "groupWhitExclusiveVisibility": "Toisiaan poissulkeva tasojen näkyvyys"
     },
     "toc": {
       "toggleLayerVisibility": "Vaihda tason näkyvyys",
