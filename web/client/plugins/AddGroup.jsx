@@ -13,7 +13,7 @@ import get from 'lodash/get';
 import Portal from '../components/misc/Portal';
 import ResizableModal from '../components/misc/ResizableModal';
 import Message from '../components/I18N/Message';
-import {FormControl, FormGroup} from 'react-bootstrap';
+import {Checkbox, FormControl, FormGroup} from 'react-bootstrap';
 import {setControlProperties} from '../actions/controls';
 import {addGroup} from '../actions/layers';
 import { createPlugin } from '../utils/PluginsUtils';
@@ -34,7 +34,9 @@ class AddGroup extends Component {
     };
 
     state = {
-        groupName: ""
+        groupName: "",
+        groupWhitExclusiveVisibility: false
+
     };
 
     UNSAFE_componentWillReceiveProps(newProps) {
@@ -73,6 +75,13 @@ class AddGroup extends Component {
                         <FormControl name="groupName" onChange={this.changeName} value={this.state.groupName}/>
                     </FormGroup>
                 </div>
+                <div id="mapstore-add-toc-group">
+                    <FormGroup>
+                        <Checkbox name="groupWhitExclusiveVisibility" value={this.state.groupWhitExclusiveVisibility} onChange={this.changeLayerVisibility}>
+                            <Message msgId="addgroup.groupWhitExclusiveVisibility"/>
+                        </Checkbox>
+                    </FormGroup>
+                </div>
             </ResizableModal>
         </Portal>);
     }
@@ -86,6 +95,12 @@ class AddGroup extends Component {
     isValid = (name) => {
         return name !== '';
     };
+
+    changeLayerVisibility = (el) => {
+        this.setState((oldState) => {
+            return {groupWhitExclusiveVisibility: !oldState.groupWhitExclusiveVisibility}
+        });
+    }
 }
 
 const AddGroupPlugin = connect((state) => ({
