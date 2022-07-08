@@ -75,7 +75,7 @@ class AddGroup extends Component {
                         <FormControl name="groupName" onChange={this.changeName} value={this.state.groupName}/>
                     </FormGroup>
                 </div>
-                <div id="mapstore-add-toc-group">
+                <div id="mapstore-group-whit-exclusive-visibility">
                     <FormGroup>
                         <Checkbox name="groupWhitExclusiveVisibility" value={this.state.groupWhitExclusiveVisibility} onChange={this.changeLayerVisibility}>
                             <Message msgId="addgroup.groupWhitExclusiveVisibility"/>
