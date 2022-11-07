@@ -11,6 +11,7 @@ export const createControlVariableSelector = (name, attribute) => state => get(s
 export const createControlEnabledSelector = name => createControlVariableSelector(name, 'enabled');
 
 
+export const aboutSelector = (state) => get(state, "controls.about.enabled", false);
 /**
  * selects the showCoordinateEditor flag from state
  * @memberof selectors.controls
@@ -20,6 +21,7 @@ export const createControlEnabledSelector = name => createControlVariableSelecto
 export const showCoordinateEditorSelector = (state) => get(state, "controls.measure.showCoordinateEditor");
 export const shareSelector = (state) => get(state, "controls.share.enabled");
 export const measureSelector = (state) => get(state, "controls.measure.enabled");
+export const versionInfoSelector = (state) => get(state, "controls.version.enabled");
 export const queryPanelSelector = (state) => get(state, "controls.queryPanel.enabled");
 export const printSelector = (state) => get(state, "controls.print.enabled");
 export const wfsDownloadSelector = state => !!get(state, "controls.layerdownload.enabled");

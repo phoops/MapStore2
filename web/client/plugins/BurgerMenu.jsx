@@ -6,12 +6,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 import React from 'react';
-
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import assign from 'object-assign';
 import { DropdownButton, Glyphicon, MenuItem } from 'react-bootstrap';
+
 import tooltip from "../components/misc/enhancers/tooltip";
+import ToolsContainer from './containers/ToolsContainer';
+import Message from './locale/Message';
+import { createPlugin } from '../utils/PluginsUtils';
+import {setControlProperty} from "../actions/controls";
+import {burgerMenuSelector} from "../selectors/controls";
+
+import './burgermenu/burgermenu.css';
 
 const TDropdownButton = tooltip(DropdownButton);
 const Container = ({children, ...props}) => (
@@ -34,16 +41,9 @@ const InnerContainer = ({children, ...props}) => (
     </div>
 );
 
-const AnchorElement = ({children, href, onClick}) => (
-    <a href={href} onClick={onClick}>{children}</a>
+const AnchorElement = ({children, href, target, onClick}) => (
+    <a href={href} target={target} onClick={onClick}>{children}</a>
 );
-
-import ToolsContainer from './containers/ToolsContainer';
-import Message from './locale/Message';
-import { createPlugin } from '../utils/PluginsUtils';
-import './burgermenu/burgermenu.css';
-import {setControlProperty} from "../actions/controls";
-import {burgerMenuSelector} from "../selectors/controls";
 
 class BurgerMenu extends React.Component {
     static propTypes = {

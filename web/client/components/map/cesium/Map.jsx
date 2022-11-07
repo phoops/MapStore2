@@ -70,6 +70,7 @@ class CesiumMap extends React.Component {
         hookRegister: {
             registerHook
         },
+        orientate: undefined,
         viewerOptions: {
             orientation: {
                 heading: 0,
@@ -113,7 +114,10 @@ class CesiumMap extends React.Component {
             // to avoid error on mount
             creditContainer: creditContainer
                 ? creditContainer
-                : undefined
+                : undefined,
+            requestRenderMode: true,
+            maximumRenderTimeChange: Infinity,
+            skyBox: false
         }, this.getMapOptions(this.props.mapOptions)));
 
         if (this.props.errorPanel) {
@@ -159,9 +163,10 @@ class CesiumMap extends React.Component {
         scene.globe.showGroundAtmosphere = this.props.mapOptions?.showGroundAtmosphere ?? false;
 
         // this is needed to display correctly intersection between terrain and primitives
-        scene.globe.depthTestAgainstTerrain = this.props.mapOptions?.depthTestAgainstTerrain ?? true;
+        scene.globe.depthTestAgainstTerrain = this.props.mapOptions?.depthTestAgainstTerrain ?? false;
 
         this.forceUpdate();
+        map.scene.requestRender();
     }
 
     UNSAFE_componentWillReceiveProps(newProps) {
@@ -189,6 +194,19 @@ class CesiumMap extends React.Component {
                 }
             };
             this.setView(position);
+        }
+
+        if (prevProps && (this.props.mapOptions.showSkyAtmosphere !== prevProps?.mapOptions?.showSkyAtmosphere)) {
+            this.map.scene.skyAtmosphere.show = this.props.mapOptions.showSkyAtmosphere;
+        }
+        if (prevProps && (this.props.mapOptions.showGroundAtmosphere !== prevProps?.mapOptions?.showGroundAtmosphere)) {
+            this.map.scene.globe.showGroundAtmosphere = this.props.mapOptions.showGroundAtmosphere;
+        }
+        if (prevProps && (this.props.mapOptions.enableFog !== prevProps?.mapOptions?.enableFog)) {
+            this.map.scene.fog.enabled = this.props.mapOptions.enableFog;
+        }
+        if (prevProps && (this.props.mapOptions.depthTestAgainstTerrain !== prevProps?.mapOptions?.depthTestAgainstTerrain)) {
+            this.map.scene.globe.depthTestAgainstTerrain = this.props.mapOptions.depthTestAgainstTerrain;
         }
     }
 
@@ -220,14 +238,17 @@ class CesiumMap extends React.Component {
                         x: x,
                         y: y
                     },
-                    height: this.props.mapOptions && this.props.mapOptions.terrainProvider ? cartographic.height : undefined,
+                    height: (this.props.mapOptions && this.props.mapOptions.terrainProvider) || intersectedFeatures.length > 0
+                        ? cartographic.height
+                        : undefined,
                     cartographic,
                     latlng: {
                         lat: latitude,
                         lng: longitude
                     },
                     crs: "EPSG:4326",
-                    intersectedFeatures
+                    intersectedFeatures,
+                    resolution: getResolutions()[Math.round(this.props.zoom)]
                 });
             }
         }
@@ -291,25 +312,16 @@ class CesiumMap extends React.Component {
     };
 
     getIntersectedFeatures = (map, position) => {
-        const features = map.scene.drillPick(position);
-        if (features) {
-            const groupIntersectedFeatures = features.reduce((acc, feature) => {
-                if (feature instanceof Cesium.Cesium3DTileFeature && feature?.tileset?.msId) {
-                    const msId = feature.tileset.msId;
-                    // 3d tile feature does not contain a geometry in the Cesium3DTileFeature class
-                    // it has content but refers to the whole tile model
-                    const propertyNames = feature.getPropertyNames();
-                    const properties = Object.fromEntries(propertyNames.map(key => [key, feature.getProperty(key)]));
-                    return {
-                        ...acc,
-                        [msId]: acc[msId]
-                            ? [...acc[msId], { type: 'Feature', properties, geometry: null }]
-                            : [{ type: 'Feature', properties, geometry: null }]
-                    };
-                }
-                return acc;
-            }, []);
-            return Object.keys(groupIntersectedFeatures).map(id => ({ id, features: groupIntersectedFeatures[id] }));
+        // we can use pick so the only first intersect feature will be returned
+        // this is more intuitive for uses such as get feature info
+        const feature = map.scene.pick(position);
+        if (feature instanceof Cesium.Cesium3DTileFeature && feature?.tileset?.msId) {
+            const msId = feature.tileset.msId;
+            // 3d tile feature does not contain a geometry in the Cesium3DTileFeature class
+            // it has content but refers to the whole tile model
+            const propertyNames = feature.getPropertyNames();
+            const properties = Object.fromEntries(propertyNames.map(key => [key, feature.getProperty(key)]));
+            return [{ id: msId, features: [{ type: 'Feature', properties, geometry: null }] }];
         }
         return [];
     }

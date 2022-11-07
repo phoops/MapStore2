@@ -7,17 +7,14 @@
 */
 import Rx from 'rxjs';
 
-import { updateMapLayout } from '../actions/maplayout';
-import { TOGGLE_CONTROL, SET_CONTROL_PROPERTY, SET_CONTROL_PROPERTIES } from '../actions/controls';
+import {UPDATE_DOCK_PANELS, updateMapLayout, FORCE_UPDATE_MAP_LAYOUT} from '../actions/maplayout';
+import {TOGGLE_CONTROL, SET_CONTROL_PROPERTY, SET_CONTROL_PROPERTIES, setControlProperty} from '../actions/controls';
 import { MAP_CONFIG_LOADED } from '../actions/config';
-import { SIZE_CHANGE, CLOSE_FEATURE_GRID, OPEN_FEATURE_GRID } from '../actions/featuregrid';
+import {SIZE_CHANGE, CLOSE_FEATURE_GRID, OPEN_FEATURE_GRID, closeFeatureGrid} from '../actions/featuregrid';
 
 import {
     CLOSE_IDENTIFY,
-    ERROR_FEATURE_INFO,
     TOGGLE_MAPINFO_STATE,
-    LOAD_FEATURE_INFO,
-    EXCEPTIONS_FEATURE_INFO,
     NO_QUERYABLE_LAYERS
 } from '../actions/mapInfo';
 
@@ -33,15 +30,17 @@ import { mapInfoDetailsSettingsFromIdSelector, isMouseMoveIdentifyActiveSelector
  * @name mapLayout
  */
 
-import { head, get } from 'lodash';
+import {head, get, findIndex, keys} from 'lodash';
 
 import { isFeatureGridOpen, getDockSize } from '../selectors/featuregrid';
 import {DEFAULT_MAP_LAYOUT} from "../utils/MapUtils";
+import {dockPanelsSelector} from "../selectors/maplayout";
 
 /**
  * Capture that cause layout change to update the proper object.
  * Configures a map layout based on state of panels.
  * @param {external:Observable} action$ manages `MAP_CONFIG_LOADED`, `SIZE_CHANGE`, `CLOSE_FEATURE_GRID`, `OPEN_FEATURE_GRID`, `CLOSE_IDENTIFY`, `NO_QUERYABLE_LAYERS`, `LOAD_FEATURE_INFO`, `TOGGLE_MAPINFO_STATE`, `TOGGLE_CONTROL`, `SET_CONTROL_PROPERTY`.
+ * @param store
  * @memberof epics.mapLayout
  * @return {external:Observable} emitting {@link #actions.map.updateMapLayout} action
  */
@@ -56,14 +55,13 @@ export const updateMapLayoutEpic = (action$, store) =>
         CLOSE_IDENTIFY,
         NO_QUERYABLE_LAYERS,
         TOGGLE_MAPINFO_STATE,
-        LOAD_FEATURE_INFO,
-        EXCEPTIONS_FEATURE_INFO,
         TOGGLE_CONTROL,
         SET_CONTROL_PROPERTY,
         SET_CONTROL_PROPERTIES,
         SHOW_SETTINGS,
         HIDE_SETTINGS,
-        ERROR_FEATURE_INFO)
+        FORCE_UPDATE_MAP_LAYOUT
+    )
         .switchMap(() => {
             const state = store.getState();
 
@@ -160,6 +158,56 @@ export const updateMapLayoutEpic = (action$, store) =>
             }));
         });
 
+/**
+ * Deactivates every other dock panel at specific location except the one that was open
+ * @param action$
+ * @param store
+ * @returns {Observable<unknown>}
+ */
+export const updateActiveDockEpic = (action$, store) =>
+    action$.ofType(SET_CONTROL_PROPERTIES, SET_CONTROL_PROPERTY, TOGGLE_CONTROL, UPDATE_DOCK_PANELS)
+        .filter(({
+            control, property, properties = [],
+            type, action}) => {
+            let assertion = false;
+            const state = store.getState();
+            const controlState = state?.controls[control]?.enabled;
+            switch (type) {
+            case UPDATE_DOCK_PANELS:
+                return action === 'add';
+            case SET_CONTROL_PROPERTY:
+            case TOGGLE_CONTROL:
+                assertion = (property === 'enabled' || !property) && controlState;
+                break;
+            default:
+                assertion = findIndex(keys(properties), prop => prop === 'enabled') > -1 && controlState;
+                break;
+            }
+            return assertion;
+        })
+        .switchMap(({
+            control,
+            name, action, location
+        }) => {
+            const actions = [];
+            const state = store.getState();
+            const panelName = name ?? control;
+            const dockList = dockPanelsSelector(state);
+            const isLeft = location === 'left' || dockList.left.includes(panelName);
+            const isRight = location === 'right' || dockList.right.includes(panelName);
+            (isLeft || isRight) && actions.push(closeFeatureGrid());
+            if (action !== 'remove') {
+                isLeft && dockList.left.forEach(i => {
+                    if (i !== panelName && state?.controls[i]?.enabled) actions.push(setControlProperty(i, 'enabled', null));
+                });
+                isRight && dockList.right.forEach(i => {
+                    if (i !== panelName && state?.controls[i]?.enabled) actions.push(setControlProperty(i, 'enabled', null));
+                });
+            }
+            return Rx.Observable.from(actions);
+        });
+
 export default {
-    updateMapLayoutEpic
+    updateMapLayoutEpic,
+    updateActiveDockEpic
 };

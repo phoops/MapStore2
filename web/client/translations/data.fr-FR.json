@@ -35,7 +35,12 @@
             "message": "Échec du rechargement de la couche avec un nom modifié"
         },
         "version": {
-            "label": "Version"
+          "title": "MapStore Version",
+          "label": "Version",
+          "message": "Message",
+          "commit": "Commit",
+          "date": "Date",
+          "githubUrl": "Ouvrir l'arborescence github dans un nouvel onglet"
         },
         "errorPage": {
             "title":"Oups, quelque chose a mal tourné...",
@@ -422,6 +427,13 @@
             "renderingErrorTitle": "Erreur de rendu",
             "renderingErrorMessage": "<p>Le rendu de la carte s'est arrêté et cela peut être dû à différentes raisons : </p><ul><li>Le style appliqué contient des règles ou des variables non prises en charge par les fonctionnalités</li>< li>Le calque n'est pas correctement configuré</li></ul><p>Vous pouvez appliquer des modifications au style de calque, puis cliquer sur le bouton 'Recharger la carte'. <br/> Consultez le message ci-dessous pour plus d'informations :< /p>",
             "reloadMap": "Recharger la carte",
+            "settings": {
+              "title": "Paramètres de la carte",
+              "skyAtmosphere": "Afficher l'atmosphère du ciel",
+              "groundAtmosphere": "Montrer l'atmosphère du terrain",
+              "fog": "Afficher le brouillard",
+              "depthTest": "Activer le depthTest sur le terrain"
+            },
             "thumbnailError": {
                 "error403": "Une erreur est survenue lors de la suppression de la vignette",
                 "error404": "Une erreur est survenue lors de la création de la vignette",
@@ -1095,7 +1107,7 @@
             "styleGeometry": "Changer le style",
             "deleteGeometry": "Supprimer toutes les géométries d'annotations",
             "removeannotation": "Voulez-vous supprimer l'annotation avec le titre : {title}?",
-            "removegeometry": "Voulez-vous supprimer toutes les annotations ?",
+            "removegeometry": "Voulez-vous supprimer cette géometrie ?",
             "confirm": "Confirmer",
             "mandatory": "Champ obligatoire",
             "add": "Nouvelle",
@@ -1194,6 +1206,8 @@
             "passwordChanged": "Mot de passe changé",
             "passwordError": "Erreur lors du changement de mot de passe",
             "signIn": "S'authentifier",
+            "signInWith": "Se connecter avec",
+            "orSignInWith": "Ou connectez-vous avec",
             "loginFail": "Erreur d'authentification",
             "loginFailedStatusMessages": {
                 "usernamePwdInsert": "Merci d'entrer votre nom d'utilisateur et votre mot de passe",
@@ -1701,6 +1715,7 @@
         },
         "layerdownload": {
             "title": "Exporter des données",
+            "service": "Service",
             "format": "Format de fichier",
             "srs": "Système de référence spatiale",
             "export": "Exporter",
@@ -1775,7 +1790,8 @@
                 },
                 "emptyMap": {
                     "title": "Carte vide",
-                    "description": "Démarrer à partir d'une carte vide"
+                    "description": "Démarrer à partir d'une carte vide",
+                    "noNameDescription": "La sélection a une carte vide. Ajoutez un nom à la carte vide pour procéder à la configuration de la carte"
                 }
             },
             "title": "Titre",
@@ -1804,7 +1820,7 @@
                     "backToPreview": "Retour à l'aperçu",
                     "backToChartOptions": "Retour aux options de graphique",
                     "selectALayer": "Sélectionner une couche",
-                    "selectAMap": "Sélectionner une carte",
+                    "selectAMap": "Sélectionnez une ou plusieurs cartes",
                     "configureChartOptions": "Configurer les options de graphique",
                     "configureWidgetOptions": "Configurer les options du widget",
                     "backToTableOptions": "Retour à l'option de table",
@@ -1815,6 +1831,7 @@
                     "titlePlaceholder": "Entrez le titre...",
                     "textPlaceholder": "Entrez le texte...",
                     "useThisMap": "Utiliser cette carte",
+                    "useTheseMap": "Utilisez ces cartes",
                     "configureMapOptions": "Configurer les options de la carte",
                     "enableIdentifyTool": "Activer l'outil d'identification",
                     "disableIdentifyTool": "Désactiver l'outil d'identification",
@@ -1878,6 +1895,13 @@
                     "unhide": "Afficher",
                     "unhideDescription": "Afficher le widget pour les autres utilisateurs"
                 }
+            },
+            "mapSwitcher": {
+                "noResults": "Aucune carte trouvée",
+                "placeholder": "Entrez le nom de la carte",
+                "selectLabel": "Sélectionnez une carte",
+                "infoOnHide": "Développer le widget pour voir le sélecteur de carte",
+                "subTitle": "<p>Pour la multi-sélection,<br>sur Windows utilisez CTRL + clic <br> et sur Mac utilisez contrôle + clic</p>"
             },
             "chartType": {
                 "bar": {
@@ -2010,6 +2034,14 @@
         },
         "dashboard": {
             "loadingSpinner": "Chargement du tableau de bord",
+            "importDialog": {
+                "heading": "Supprimer un fichier.json de tableau de bord précédemment exporté",
+                "selectFiles": "Sélectionner un fichier",
+                "note": "Les données du fichier importé remplaceront les données du tableau de bord actuel"
+            },
+            "exportDialog": {
+              "heading": "Exporter le tableau de bord sous forme de fichier .json"
+            },
             "errors": {
                 "loading": {
                     "title": "Erreur lors du chargement du tableau de bord",
@@ -2030,7 +2062,8 @@
                 "showConnections": "Afficher les connexions",
                 "hideConnections": "Masquer les connexions"
             },
-            "emptyTitle": "Le tableau de bord est vide"
+            "emptyTitle": "Le tableau de bord est vide",
+            "delete": "Supprimer le tableau"
         },
         "dashboardEmbedded": {
             "loadingSpinner": "Chargement du tableau de bord",
@@ -2178,10 +2211,16 @@
             "addMarkRule": "Ajouter une règle de marque",
             "shape": "Forme",
             "fill": "Fill color",
+            "clampToGround": "S'adapter au terrain",
+            "msBringToFront": "Mettre en avant",
             "strokeColor": "Couleur de ligne",
             "strokeWidth": "Largeur de ligne",
             "radius": "Rayon",
             "rotation": "Rotation",
+            "classificationtype": "Type de polygone",
+            "3dTile": "3D",
+            "terrain": "Terrain",
+            "both": "Les deux",
             "addIconSymbolizer": "Ajouter un symboliseur d'icône",
             "addIconRule": "Ajouter une règle d'icône",
             "image": "Image",
@@ -2356,8 +2395,12 @@
         "timeline": {
             "settings": {
                 "title": "Paramètres de la timeline",
+                "snapType": "Point d'accrochage de l'intervalle de temps",
+                "snapTypeTooltip": "Lorsque l'alignement sur la couche guide est actif et que les données temporelles sont prolongées, le curseur s'aligne sur les bords respectifs de l'intervalle de temps (début/fin)",
                 "snapToGuideLayer": "Aligner sur la couche guide",
-                "snapToGuideLayerTooltip": "Force le curseur temporel à s'aligner sur les données de la couche sélectionnée. Désactivez cette option pour déverrouiller les curseurs temporels et activer la personnalisation de l'étape d'animation"
+                "snapToGuideLayerTooltip": "Force le curseur temporel à s'aligner sur les données de la couche sélectionnée. Désactivez cette option pour déverrouiller les curseurs temporels et activer la personnalisation de l'étape d'animation",
+                "snapToEnd": "Début",
+                "snapToStart": "Fin"
             },
             "hide": "Masquer la timeline",
             "show": "Afficher la timeline",
@@ -2488,6 +2531,7 @@
             "zoomToContent": "Zoom sur le contenu",
             "addWebPageContent": "Ajouter du contenu de page web",
             "emptyTitle": "Cette story est vide",
+            "delete": "Supprimer geostory",
             "emptyDescription": "Commencer une story géniale en ajoutant du nouveau contenu",
             "closeFullscreenMap": "Fermer la carte plein écran",
             "showFullscreenMap": "Montrer la carte en plein écran",
@@ -2599,6 +2643,14 @@
                     "overlay": "Recouvrir",
                     "templateTooltip":"Ce paramètre vous permet d'activer la fonction Identifier sur la carte en définissant un format générique pour toutes les couches. Il est possible de configurer un format différent pour chaque niveau à l'aide de l'éditeur de carte avancé (icône crayon). Pour plus d'informations, consultez le <a href='https://mapstore.readthedocs.io/en/latest/user-guide/layer-settings/#templates' target='_blank'> guide de l'utilisateur </a>. Si une couche a défini son propre format d'identification, elle sera utilisée à la place du format générique défini au niveau de la carte."
                 }
+            },
+            "importDialog": {
+                "heading": "Supprimer un fichier.json de story précédemment exporté",
+                "selectFiles": "Sélectionner un fichier",
+                "note": "Les données du fichier importé remplaceront les données du story actuel"
+            },
+            "exportDialog": {
+              "heading": "Exporter le story sous forme de fichier .json"
             },
             "errors": {
                 "loading": {

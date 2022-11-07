@@ -10,6 +10,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Grid, Row, Col } from 'react-bootstrap';
 import src from "./attribution/geosolutions-brand.png";
+import {createPlugin} from "../../utils/PluginsUtils";
 
 /**
  * Footer plugin, section of the homepage.
@@ -87,4 +88,8 @@ class Footer extends React.Component {
     }
 }
 
-export const FooterPlugin = Footer;
+const FooterPlugin = createPlugin('Footer', {
+    component: Footer
+});
+
+export default FooterPlugin;
