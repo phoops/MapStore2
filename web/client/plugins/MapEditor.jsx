@@ -37,25 +37,6 @@ const mapEditorButton = ({ toggleAdvancedEditing = () => { }, map = {} }) => {
 const ConnectedMapEditorButton = connect(null, { toggleAdvancedEditing: show }
 )(mapEditorButton);
 
-
-/**
- * Connect and toggle advanced Editor
- */
-const mapEditorButton = ({ toggleAdvancedEditing = () => { }, map = {} }) => {
-    return (<ToolbarButton
-        bsStyle="primary"
-        glyph="pencil"
-        tooltipId="geostory.contentToolbar.advancedMapEditor"
-        onClick={() => {
-            const {id, ...data} = map;
-            toggleAdvancedEditing('inlineEditor', {data, id});
-        }} />);
-};
-
-const ConnectedMapEditorButton = connect(null, { toggleAdvancedEditing: show }
-)(mapEditorButton);
-
-
 /**
  * Wraps the MapViewer in a modal to allow to edit a map with the usual plugins.
  * Used with {@link #plugins.GeoStoryEditor|GeoStoryEditor}.
