@@ -547,10 +547,11 @@
               }, {
                 "name": "Identify",
                 "cfg": {
-                    "showInMapPopup":true,
+                    "showInMapPopup":false,
                     "viewerOptions": {
                         "container": "{context.ReactSwipe}"
-                    }
+                    },
+                    "size": 360
                 }
             }, {
                 "name": "ZoomAll",

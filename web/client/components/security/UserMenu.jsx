@@ -118,7 +118,7 @@ class UserMenu extends React.Component {
         let DropDown = this.props.nav ? TNavDropdown : TDropdownButton;
         let itemArray = [];
         if (this.props.showAccountInfo) {
-            itemArray.push(<MenuItem key="accountInfo" onClick={this.props.onShowAccountInfo}> <Glyphicon glyph="user" /><Message msgId="user.info"/></MenuItem>);
+            itemArray.push(<MenuItem key="accountInfo" className="rt-menu-item" onClick={this.props.onShowAccountInfo}> <Glyphicon glyph="user" /><Message msgId="user.info"/></MenuItem>);
         }
         if (this.props.showPasswordChange) {
             itemArray.push(<MenuItem key="passwordChange" onClick={this.props.onShowChangePassword}> <Glyphicon glyph="asterisk" /> <Message msgId="user.changePwd"/></MenuItem>);

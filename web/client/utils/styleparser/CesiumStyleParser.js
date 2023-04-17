@@ -550,6 +550,7 @@ function getStyleFuncFromRules({
                             Object.keys(graphics).forEach(graphicKey => {
                                 entity[graphicKey] = graphics[graphicKey];
                             });
+                            modifyPointHeight(map, entity, symbolizer, properties);
                         }
                         entity._msSymbolizer = symbolizer;
                         entity._msGlobalOpacity = globalOpacity;

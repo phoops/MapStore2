@@ -14,9 +14,11 @@ They are `.properties` files or `.xml` files, and they allow to configure the va
 They are located in `java/web/src/main/resources` and they will be copied in  `MapStore.war` under the directory `/WEB-INF/classes`.
 
 * `proxy.properties`: configuration for the internal proxy (for cross-origin requests). More information [here](https://github.com/geosolutions-it/http-proxy/wiki/Configuring-Http-Proxy).
+* `proxy.properties`: configuration for the internal proxy (for cross-origin requests). More information [here](https://github.com/geosolutions-it/http-proxy/wiki/Configuring-Http-Proxy).
 * `geostore-datasource-ovr.properties`: provides settings for the database.
 * `log4j2.properties`: configuration for back-end logging
 * `sample-categories.xml`: initial set of categories for back-end resources (MAP, DASHBOARD, GEOSTORY...)
+* `mapstore.properties`: allow specific overrides to front-end files, See [externalization system](externalized-configuration.md#externalized-configuration) for more details
 * `mapstore.properties`: allow specific overrides to front-end files, See [externalization system](externalized-configuration.md#externalized-configuration) for more details
 
 Except for `mapstore.properties` and `ldap.properties`, all these files are simply overrides of original configuration files coming from the included sub-applications part of the back-end. In `WEB-INF/classes` you will find also some other useful files coming from the original application:
@@ -25,8 +27,13 @@ Except for `mapstore.properties` and `ldap.properties`, all these files are simp
 
 Back-end security can be configured to use different authentication strategies. Maven profiles can be used to switch between these different strategies.
 
+Back-end security can be configured to use different authentication strategies. Maven profiles can be used to switch between these different strategies.
+
+Depending on the chosen profile a different file will be copied from the `product/config` folder to  override `WEB-INF/classes/geostore-spring-security.xml` in the final package. In particular:
 Depending on the chosen profile a different file will be copied from the `product/config` folder to  override `WEB-INF/classes/geostore-spring-security.xml` in the final package. In particular:
 
+* **default**: `db\geostore-spring-security-db.xml` (geostore database)
+* **ldap**: `ldap\geostore-spring-security-ldap.xml` (LDAP source)
 * **default**: `db\geostore-spring-security-db.xml` (geostore database)
 * **ldap**: `ldap\geostore-spring-security-ldap.xml` (LDAP source)
 
@@ -112,6 +119,9 @@ They are JSON files that will be loaded via HTTP from the client, keeping most o
 
 Several configuration files (at development and / or run time) are available to configure all the different aspects of an application.
 
+* `localConfig.json`: Dedicated to the application configuration. Defines all general settings of the front-end part, with all the plugins for all the pages. See [Application Configuration](local-config.md#application-configuration) for more information.
+* `new.json` Can be customized to set-up the initial new map, setting the backgrounds, initial position .. See [Maps configuration](maps-configuration.md#map-configuration) for more information.
+* `pluginsConfig.json`: Allows to configure the context editor plugins list. See [Context Editor Configuration](context-editor-config.md#configuration-of-application-context-manager) for more information.
 * `localConfig.json`: Dedicated to the application configuration. Defines all general settings of the front-end part, with all the plugins for all the pages. See [Application Configuration](local-config.md#application-configuration) for more information.
 * `new.json` Can be customized to set-up the initial new map, setting the backgrounds, initial position .. See [Maps configuration](maps-configuration.md#map-configuration) for more information.
 * `pluginsConfig.json`: Allows to configure the context editor plugins list. See [Context Editor Configuration](context-editor-config.md#configuration-of-application-context-manager) for more information.

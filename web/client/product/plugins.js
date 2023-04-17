@@ -24,7 +24,6 @@ import UserSession from "../plugins/UserSession";
 import Login from '../plugins/Login';
 import Identify from '../plugins/Identify';
 
-
 /**
   * Please, keep them sorted alphabetically
  */

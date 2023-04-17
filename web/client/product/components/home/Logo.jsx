@@ -7,7 +7,7 @@
  */
 import React from 'react';
 
-import logo1 from '../../assets/img/mapstorelogo.png';
+import logo1 from '../../assets/img/logo-regione-toscana.png';
 import logo2 from '../../assets/img/MapStore2.png';
 
 class Logo extends React.Component {

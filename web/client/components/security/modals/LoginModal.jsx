@@ -16,7 +16,7 @@ import { getMessageById } from '../../../utils/LocaleUtils';
 import '../css/security.css';
 import Button from '../../misc/Button';
 import google from './assets/google.svg';
-import keycloak from './assets/keycloak.svg';
+import keycloak from './assets/spid.svg';
 import withTooltip from '../../misc/enhancers/tooltip';
 
 
@@ -30,7 +30,7 @@ const LoginItem = withTooltip(({provider, onLogin}) => {
     const {title, provider: providerName, imageURL} = provider;
     const logo = imageURL ?? logos[providerName];
     const text = title;
-    return <a style={{margin: 20}} onClick={() => onLogin(provider)}>{logo ? <img src={logo} alt={text} style={{minHeight: 50}} /> : text ?? providerName}</a>;
+    return <a style={{margin: 20, cursor: 'pointer'}} onClick={() => onLogin(provider)}>{logo ? <img src={logo} alt={text} style={{minHeight: 50}} /> : text ?? providerName}</a>;
 });
 /**
  * A Modal window to show password reset form

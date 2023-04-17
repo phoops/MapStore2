@@ -255,9 +255,9 @@ example
                 "href": "dist/themes/complete-theme-override.css",
                 "defaultVariables": {
                     "ms-main-color": "#000000",
-                    "ms-main-bg": "#FFFFFF",
+                    "ms-main-bg": "#F4F4F4",
                     "ms-primary-contrast": "#FFFFFF",
-                    "ms-primary": "#078aa3",
+                    "ms-primary": "#E2001A",
                     "ms-success-contrast": "#FFFFFF",
                     "ms-success": "#398439"
                 }
@@ -275,9 +275,9 @@ example
         ],
         "basicVariables": {
             "ms-main-color": "#000000",
-            "ms-main-bg": "#FFFFFF",
+            "ms-main-bg": "#F4F4F4",
             "ms-primary-contrast": "#FFFFFF",
-            "ms-primary": "#078aa3",
+            "ms-primary": "#E2001A",
             "ms-success-contrast": "#FFFFFF",
             "ms-success": "#398439"
         }

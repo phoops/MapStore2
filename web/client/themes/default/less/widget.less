@@ -345,6 +345,9 @@
                             word-break: break-all;
                         }
                     }
+                    .mapstore-slider {
+                        .em(margin-top, -8);
+                    }
                 }
             }
         }
@@ -405,6 +408,36 @@
                 border-bottom-style: solid;
                 .em(padding-bottom, 8);
             }
+        }
+        .map-widget-view {
+            .widget-icons, .widget-title {
+                .em(margin-bottom, 6);
+            }
+            .mapstore-widget-header {
+                height: max-content;
+                .mapstore-widget-options {
+                    align-items: center;
+                    .em(margin-top, 4);
+                    .em(margin-bottom, 4);
+                    .map-switcher {
+                        text-align: left;
+                        font-weight: normal;
+                        .em(width, 200);
+                        .Select-option {
+                            word-break: break-all;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .mapstore-widget-card.single-widget {
+        .mapstore-widget-options {
+            width: 24px;
+        }
+        .mapstore-widget-header {
+            height: auto;
         }
     }
 }

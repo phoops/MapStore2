@@ -46,18 +46,18 @@ class Footer extends React.Component {
     };
 
     render() {
-        const { href, ...logo } = this.props.logo || {};
-        const image = (
-            <img
-                src={logo.src}
-                width={logo.width || 'auto'}
-                height={logo.height || 'auto'}
-                title={logo.title || ''}
-                alt={logo.alt || ''} />
-        );
+        // const { href, ...logo } = this.props.logo || {};
+        // const image = (
+        //     <img
+        //         src={logo.src}
+        //         width={logo.width || 'auto'}
+        //         height={logo.height || 'auto'}
+        //         title={logo.title || ''}
+        //         alt={logo.alt || ''} />
+        // );
         return (
             <Grid>
-                {logo && logo.src && <Row>
+                {/* {logo && logo.src && <Row>
                     <Col xs={12} className="text-center">
                         <div>
                             {href ? <a target="_blank" href={href}>
@@ -65,11 +65,24 @@ class Footer extends React.Component {
                             </a> : image}
                         </div>
                     </Col>
-                </Row>}
+                </Row>} */}
                 <Row>
                     <Col xs={12} className="text-center">
-                        <HTML msgId="home.footerDescription"/>
+                        {/* <HTML msgId="home.footerDescription"/> */}
+                        <p>Powered by <a href="https://www.geosolutionsgroup.com/technologies/mapstore/" title="MapStore product page" alt="MapStore product page">MapStore</a></p>
                     </Col>
+                </Row>
+                <Row>
+                    <section className="rt-footer">
+                        <div className="rt-container">
+                            <span className="rt-footer-info">Partita IVA 01386030488</span>
+                            <div className="rt-footer-logo">
+                                <picture>
+                                    <img alt="Logo Regione Toscana" src="https://www.regione.toscana.it/o/regione-toscana-theme/images/logo-regione-footer.png" height="74" />
+                                </picture>
+                            </div>
+                        </div>
+                    </section>
                 </Row>
             </Grid>
         );
