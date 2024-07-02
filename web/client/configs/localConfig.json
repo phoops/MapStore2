@@ -56,6 +56,15 @@
         "urlPattern": ".*rest/config.*",
         "method": "bearer"
       }],
+    "authenticationProviders": [
+      {
+        "type": "openID",
+        "provider": "keycloak"
+      },
+      {
+        "type": "basic",
+        "provider": "geostore"
+      }],
     "monitorState": [
       {"name": "router", "path": "router.location.pathname"},
       {"name": "browser", "path": "browser"},
@@ -630,10 +639,11 @@
               }, {
                 "name": "Identify",
                 "cfg": {
-                    "showInMapPopup":true,
+                    "showInMapPopup":false,
                     "viewerOptions": {
                         "container": "{context.ReactSwipe}"
-                    }
+                    },
+                    "size": 360
                 }
             }, {
                 "name": "ZoomAll",

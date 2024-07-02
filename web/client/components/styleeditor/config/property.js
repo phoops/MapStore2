@@ -330,6 +330,22 @@ const property = {
             return {
                 [key]: value
             };
+        }
+    }),
+    msHeightReference: ({ key = 'msHeightReference', label = 'Height reference from ground' }) => ({
+        type: 'toolbar',
+        label,
+        config: {
+            options: [{
+                labelId: 'styleeditor.none',
+                value: 'none'
+            }, {
+                labelId: 'styleeditor.relative',
+                value: 'relative'
+            }, {
+                labelId: 'styleeditor.clamp',
+                value: 'clamp'
+            }]
         },
         isDisabled
     }),

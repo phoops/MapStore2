@@ -248,6 +248,7 @@ const FeaturedMapsPlugin = compose(
 const LabeledNavItem = connect(featuredMapsPluginSelector)(({ isFeaturedEnabled }) =>
     isFeaturedEnabled ? (<NavItem
         target="_blank"
+        className="rt-nav-item"
         onClick={() => scrollIntoViewId('ms-featured-maps')}
     >
         <Message msgId="manager.featuredMaps" />
@@ -258,6 +259,7 @@ const IconNavItem = connect(featuredMapsPluginSelector)(({ isFeaturedEnabled }) 
         target="_blank"
         tooltip={<Message msgId="manager.featuredMaps" />}
         tooltipPosition="bottom"
+        className="rt-nav-item"
         onClick={() => scrollIntoViewId('ms-featured-maps')}
     >
         <Glyphicon glyph="star" />

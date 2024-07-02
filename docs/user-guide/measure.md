@@ -1,6 +1,7 @@
 # Performing Measurements
 
 The Measure tool in [MapStore](https://mapstore.geosolutionsgroup.com/mapstore/#/) allows the user to perform different kind of measurements (like distance, area and bearing etc.) on the map. It also provides some additional functionalities that are described in this section of the documentation. The tool is accessible from the [Side Toolbar](mapstore-toolbars.md#side-toolbar) by selecting the <img src="../img/button/measurament.jpg" class="ms-docbutton" style="max-height:20px;"/> button that opens the following toolbar:
+The Measure tools in [MapStore](https://mapstore.geosolutionsgroup.com/mapstore/#/) allows the user to perform distance, area and bearing measurements on the map. It also provides some additional functionalities that are described in this section of the documentation. The tool is accessible from [Side Toolbar](mapstore-toolbars.md#side-toolbar) by selecting the <img src="../img/button/measurament.jpg" class="ms-docbutton" style="max-height:20px;"/> button that opens the following window:
 
 <img src="../img/measure/measure.jpg" class="ms-docimage" style="max-width:600px;"/>
 

@@ -34,6 +34,7 @@ This page uses the `new.json` file as a template configuration to start creating
 You can edit `new.json` to customize this initial template. It typically contains the map backgrounds you want to use for all the new maps (identified by the special property `"group": "background"`).
 
 If you have enabled the datadir, then you can externalize the new.json or config.json files. (see [here](externalized-configuration.md#externalized-configuration) for more details)
+If you have enabled the datadir, then you can externalize the new.json or config.json files. (see [here](externalized-configuration.md#externalized-configuration) for more details)
 
 `new.json` and `config.json` are special cases, but you can configure your own static map context creating these json files in the root of the project, for instance `mycontext.json` and accessing them at the URL:
 
@@ -306,6 +307,12 @@ Some other feature will break, for example the layer properties will stop workin
     "https://d.maps.geosolutionsgroup.com/geoserver/wms",
     "https://e.maps.geosolutionsgroup.com/geoserver/wms",
     "https://f.maps.geosolutionsgroup.com/geoserver/wms"
+    "https://a.maps.geosolutionsgroup.com/geoserver/wms",
+    "https://b.maps.geosolutionsgroup.com/geoserver/wms",
+    "https://c.maps.geosolutionsgroup.com/geoserver/wms",
+    "https://d.maps.geosolutionsgroup.com/geoserver/wms",
+    "https://e.maps.geosolutionsgroup.com/geoserver/wms",
+    "https://f.maps.geosolutionsgroup.com/geoserver/wms"
   ],
   "visibility": true,
   "opacity": 1,
@@ -343,7 +350,9 @@ in `localConfig.json`
     "cfg": {
         "additionalLayers": [{
             "url": "http...",
+            "url": "http...",
             "format": "application/bil16",
+            "type": "wms",
             "type": "wms",
             ...
             "name": "elevation",
@@ -1457,6 +1466,7 @@ Openlayers:
 
 Cesium:
 
+- `tileDiscardPolicy` sets a policy for discarding (missing/broken) tiles ([https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html](https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html)). If it is not specified the NeverTileDiscardPolicy will be used. If "none" is specified, no policy at all will be set.
 - `tileDiscardPolicy` sets a policy for discarding (missing/broken) tiles ([https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html](https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html)). If it is not specified the NeverTileDiscardPolicy will be used. If "none" is specified, no policy at all will be set.
 
 MapStore specific:

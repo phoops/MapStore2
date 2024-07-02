@@ -59,25 +59,27 @@ class Home extends React.Component {
                         {...pick(restProps, ['disabled', 'active', 'block', 'componentClass', 'href', 'children', 'icon', 'bsStyle', 'className'])}
                     ><Glyphicon glyph={this.props.icon}/></Button>
                 </OverlayTrigger>
-                <ConfirmModal
-                    ref="unsavedMapModal"
-                    show={this.props.displayUnsavedDialog || false}
-                    onClose={this.props.onCloseUnsavedDialog}
-                    title={<Message msgId="resources.maps.unsavedMapConfirmTitle" />}
-                    buttons={[{
-                        bsStyle: "primary",
-                        text: <Message msgId="resources.maps.unsavedMapConfirmButtonText" />,
-                        onClick: this.goHome
-                    }, {
-                        text: <Message msgId="resources.maps.unsavedMapCancelButtonText" />,
-                        onClick: this.props.onCloseUnsavedDialog
-                    }]}
-                    fitContent
-                >
-                    <div className="ms-detail-body">
-                        <Message msgId="resources.maps.unsavedMapConfirmMessage" />
-                    </div>
-                </ConfirmModal>
+                <Portal>
+                    <ConfirmModal
+                        ref="unsavedMapModal"
+                        show={this.props.displayUnsavedDialog || false}
+                        onClose={this.props.onCloseUnsavedDialog}
+                        title={<Message msgId="resources.maps.unsavedMapConfirmTitle" />}
+                        buttons={[{
+                            bsStyle: "primary",
+                            text: <Message msgId="resources.maps.unsavedMapConfirmButtonText" />,
+                            onClick: this.goHome
+                        }, {
+                            text: <Message msgId="resources.maps.unsavedMapCancelButtonText" />,
+                            onClick: this.props.onCloseUnsavedDialog
+                        }]}
+                        fitContent
+                    >
+                        <div className="ms-detail-body">
+                            <Message msgId="resources.maps.unsavedMapConfirmMessage" />
+                        </div>
+                    </ConfirmModal>
+                </Portal>
             </React.Fragment>
         );
     }

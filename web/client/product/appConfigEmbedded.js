@@ -43,7 +43,14 @@ export default {
                     menu: "1"
                 }
             },
-            mapInfo: {enabled: true, infoFormat: 'text/html' }
+            mapInfo: {
+                enabled: true,
+                infoFormat: 'text/html',
+                showInMapPopup: false,
+                configuration: {
+                    trigger: 'click'
+                }
+            }
         },
         mobile: {
         }

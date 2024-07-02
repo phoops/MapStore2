@@ -37,7 +37,6 @@ const mapEditorButton = ({ toggleAdvancedEditing = () => { }, map = {} }) => {
 const ConnectedMapEditorButton = connect(null, { toggleAdvancedEditing: show }
 )(mapEditorButton);
 
-
 /**
  * Wraps the MapViewer in a modal to allow to edit a map with the usual plugins.
  * Used with {@link #plugins.GeoStoryEditor|GeoStoryEditor}.

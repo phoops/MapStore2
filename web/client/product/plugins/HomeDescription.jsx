@@ -39,10 +39,10 @@ class HomeDescription extends React.Component {
                 <Grid>
                     <Row>
                         <Col xs={12} className="text-center">
-                            <h1>{this.props.name}</h1>
-                            <p>
+                            {/* <h1>{this.props.name}</h1> */}
+                            <h2 className="subtitle">
                                 <HTML msgId="home.shortDescription"/>
-                            </p>
+                            </h2>
                         </Col>
                     </Row>
                 </Grid>
