@@ -25,7 +25,6 @@ import { readQueryParamsOnMapEpic } from '../epics/queryparams';
 import maptype from '../reducers/maptype';
 import maps from '../reducers/maps';
 import maplayout from '../reducers/maplayout';
-import measurement from '../reducers/measurement';
 import version from '../reducers/version';
 import mapPopups from '../reducers/mapPopups';
 import catalog from '../reducers/catalog';
