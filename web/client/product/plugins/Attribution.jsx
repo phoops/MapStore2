@@ -10,7 +10,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import src from '../assets/img/logo-regione-toscana.png';
 import assign from 'object-assign';
-import PropTypes from 'prop-types';
 
 class Attribution extends React.Component {
     static propTypes = {
