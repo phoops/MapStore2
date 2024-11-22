@@ -202,6 +202,90 @@ describe('Print Plugin', () => {
         });
     });
 
+    it('test configuration with useFixedScales and enableScalebox = true', (done) => {
+        const printingService = {
+            getMapConfiguration() {
+                return {
+                    layers: [],
+                    center: {
+                        x: 0,
+                        y: 0,
+                        crs: "EPSG:4326"
+                    }
+                };
+            },
+            validate() { return {};}
+        };
+        getPrintPlugin({
+            state: {...initialState,
+                print: {...initialState.print,
+                    capabilities: {...initialState.print.capabilities,
+                        scales: [1000000, 500000, 100000].map(value => ({name: value, value}))}
+                }}
+        }).then(({ Plugin }) => {
+            try {
+                ReactDOM.render(<Plugin
+                    projectionOptions={{
+                        "projections": [{"name": "UTM32N", "value": "EPSG:23032"}, {"name": "EPSG:3857", "value": "EPSG:3857"}, {"name": "EPSG:4326", "value": "EPSG:4326"}]
+                    }}
+                    printingService={printingService}
+                    useFixedScales mapPreviewOptions={{
+                        enableScalebox: true
+                    }}/>, document.getElementById("container"));
+                const comp = document.getElementById("container");
+                ReactTestUtils.act(() => new Promise((resolve) => resolve(comp))).then(()=>{
+                    expect(comp).toExist();
+                    const scaleBoxComp = document.querySelector("#mappreview-scalebox select");
+                    expect(scaleBoxComp).toExist();
+                    done();
+                });
+            } catch (ex) {
+                done(ex);
+            }
+        });
+    });
+    it('test configuration with useFixedScales and enableScalebox = false', (done) => {
+        const printingService = {
+            getMapConfiguration() {
+                return {
+                    layers: [],
+                    center: {
+                        x: 0,
+                        y: 0,
+                        crs: "EPSG:4326"
+                    }
+                };
+            },
+            validate() { return {};}
+        };
+        getPrintPlugin({
+            state: {...initialState,
+                print: {...initialState.print,
+                    capabilities: {...initialState.print.capabilities,
+                        scales: [1000000, 500000, 100000].map(value => ({name: value, value}))}
+                }}
+        }).then(({ Plugin }) => {
+            try {
+                ReactDOM.render(<Plugin
+                    projectionOptions={{
+                        "projections": [{"name": "UTM32N", "value": "EPSG:23032"}, {"name": "EPSG:3857", "value": "EPSG:3857"}, {"name": "EPSG:4326", "value": "EPSG:4326"}]
+                    }}
+                    printingService={printingService}
+                    useFixedScales mapPreviewOptions={{
+                        enableScalebox: false
+                    }}/>, document.getElementById("container"));
+                const comp = document.getElementById("container");
+                ReactTestUtils.act(() => new Promise((resolve) => resolve(comp))).then(()=>{
+                    expect(comp).toExist();
+                    const scaleBoxComp = document.querySelector("#mappreview-scalebox select");
+                    expect(scaleBoxComp).toNotExist();
+                    done();
+                });
+            } catch (ex) {
+                done(ex);
+            }
+        });
+    });
     it('default configuration with not allowed layers', (done) => {
         getPrintPlugin({
             layers: [{visibility: true, type: "bing"}]
@@ -478,6 +562,94 @@ describe('Print Plugin', () => {
                     expect(spy.calls.length).toBe(1);
                     expect(spy.calls[0].arguments[1].layers.length).toBe(1);
                     expect(spy.calls[0].arguments[1].layers[0].layers).toEqual(["test"]);
+                    done();
+                }, 0);
+            } catch (ex) {
+                done(ex);
+            }
+        });
+    });
+    it("test removing visible layers with invisible group", (done) => {
+        const actions = {
+            onPrint: () => {}
+        };
+        let spy = expect.spyOn(actions, "onPrint");
+        getPrintPlugin({
+            layers:
+                {
+                    flat: [
+                        {
+                            id: 'test:Linea_costa__38262060-608e-11ef-b6d2-f1ba404475c4',
+                            format: 'image/png',
+                            group: 'Default.34a0a320-608e-11ef-b6d2-f1ba404475c4',
+                            search: {
+                                url: '/geoserver/wfs',
+                                type: 'wfs'
+                            },
+                            name: 'test:Linea_costa',
+                            description: '',
+                            title: 'Linea_costa',
+                            type: 'wms',
+                            url: '/geoserver/wms',
+                            visibility: true
+                        },
+                        {
+                            type: 'wms',
+                            format: 'image/png',
+                            featureInfo: null,
+                            url: '/geoserver/wms',
+                            visibility: true,
+                            dimensions: [],
+                            name: 'test:areeverdiPolygon',
+                            title: 'areeverdiPolygon',
+                            id: 'test:areeverdiPolygon__722d7920-608e-11ef-8123-43293ce7e0e8'
+                        }
+                    ],
+                    groups: [
+                        {
+                            id: 'Default',
+                            title: 'Default',
+                            name: 'Default',
+                            nodes: [
+                                'test:areeverdiPolygon__722d7920-608e-11ef-8123-43293ce7e0e8',
+                                {
+                                    id: 'Default.34a0a320-608e-11ef-b6d2-f1ba404475c4',
+                                    title: 'g1',
+                                    name: '34a0a320-608e-11ef-b6d2-f1ba404475c4',
+                                    nodes: [
+                                        'test:Linea_costa__38262060-608e-11ef-b6d2-f1ba404475c4'
+                                    ],
+                                    visibility: false
+                                }
+                            ],
+                            visibility: true
+                        }
+                    ]
+                },
+            projection: "EPSG:4326",
+            state: {
+                ...initialState,
+                map: {
+                    ...initialState.map,
+                    zoom: 5.1
+                }
+            }
+        }).then(({ Plugin }) => {
+            try {
+                ReactDOM.render(<Plugin
+                    pluginCfg={{
+                        onPrint: actions.onPrint
+                    }}
+                    defaultBackground={["osm", "empty"]}
+                />, document.getElementById("container"));
+                const submit = document.getElementsByClassName("print-submit").item(0);
+                expect(submit).toExist();
+                ReactTestUtils.Simulate.click(submit);
+
+                setTimeout(() => {
+                    expect(spy.calls.length).toBe(1);
+                    expect(spy.calls[0].arguments[1].layers.length).toBe(1);
+                    expect(spy.calls[0].arguments[1].layers[0].layers).toEqual(['test:areeverdiPolygon']);
                     done();
                 }, 0);
             } catch (ex) {
