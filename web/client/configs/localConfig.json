@@ -58,10 +58,6 @@
       }],
     "authenticationProviders": [
       {
-        "type": "openID",
-        "provider": "keycloak"
-      },
-      {
         "type": "basic",
         "provider": "geostore"
       }],
