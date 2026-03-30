@@ -21,6 +21,7 @@ import WMSDomainAliases from "./WMSDomainAliases";
 import tooltip from '../../../misc/enhancers/buttonTooltip';
 import OverlayTrigger from '../../../misc/OverlayTrigger';
 import FormControl from '../../../misc/DebouncedFormControl';
+import { getMiscSetting } from '../../../../utils/ConfigUtils';
 
 const Button = tooltip(ButtonRB);
 const Select = localizedProps('noResultsText')(RS);
@@ -81,6 +82,8 @@ export default ({
         // Apply default configuration on new service
         service.isNew && onChangeServiceProperty("autoSetVisibilityLimits", props.autoSetVisibilityLimits);
     }, [props.autoSetVisibilityLimits]);
+
+    const experimentalInteractiveLegend = getMiscSetting('experimentalInteractiveLegend', false);
 
     const tileSelectOptions = getTileSizeSelectOptions(tileSizeOptions);
     const serverTypeOptions = getServerTypeOptions();
@@ -160,9 +163,20 @@ export default ({
                 <Select
                     value={service.layerOptions?.serverType}
                     options={serverTypeOptions}
-                    onChange={event => onChangeServiceProperty("layerOptions", { ...service.layerOptions, serverType: event?.value })} />
+                    onChange={event => {
+                        if (event?.value === ServerTypes.NO_VENDOR) onChangeServiceProperty("layerOptions", { ...service.layerOptions, enableInteractiveLegend: undefined});
+                        onChangeServiceProperty("layerOptions", { ...service.layerOptions, serverType: event?.value });
+                    }} />
             </InputGroup>
         </FormGroup>
+        {experimentalInteractiveLegend && ![ServerTypes.NO_VENDOR].includes(service.layerOptions?.serverType) && ['wms', 'csw'].includes(service.type) && <FormGroup controlId="enableInteractiveLegend" key="enableInteractiveLegend">
+            <Checkbox data-qa="display-interactive-legend-option"
+                onChange={(e) => onChangeServiceProperty("layerOptions", { ...service.layerOptions, enableInteractiveLegend: e.target.checked})}
+                checked={!isNil(service.layerOptions?.enableInteractiveLegend) ? service.layerOptions?.enableInteractiveLegend : false}>
+                <Message msgId="layerProperties.enableInteractiveLegendInfo.label" />
+                &nbsp;<InfoPopover text={<Message msgId="layerProperties.enableInteractiveLegendInfo.info" />} />
+            </Checkbox>
+        </FormGroup>}
         {![ServerTypes.NO_VENDOR].includes(service.layerOptions?.serverType) && service.type === "wms" &&  <FormGroup controlId="useCacheOption" key="useCacheOption">
             <Checkbox data-qa="display-interactive-legend-option"
                 onChange={(e) => onChangeServiceProperty("layerOptions", { ...service.layerOptions, remoteTileGrids: e.target.checked})}

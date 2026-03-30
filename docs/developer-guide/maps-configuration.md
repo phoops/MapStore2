@@ -34,7 +34,6 @@ This page uses the `new.json` file as a template configuration to start creating
 You can edit `new.json` to customize this initial template. It typically contains the map backgrounds you want to use for all the new maps (identified by the special property `"group": "background"`).
 
 If you have enabled the datadir, then you can externalize the new.json or config.json files. (see [here](externalized-configuration.md#externalized-configuration) for more details)
-If you have enabled the datadir, then you can externalize the new.json or config.json files. (see [here](externalized-configuration.md#externalized-configuration) for more details)
 
 `new.json` and `config.json` are special cases, but you can configure your own static map context creating these json files in the root of the project, for instance `mycontext.json` and accessing them at the URL:
 
@@ -248,6 +247,8 @@ Details:
 - `search`: an object to configure the search features service. It is used to link a WFS service, typically with this shape: `{url: 'http://some.wfs.service', type: 'wfs'}`.
 - `fields`: if the layer has a wfs service configured, this can contain the fields (attributes) of the features, with custom configuration (e.g. aliases, types, etc.). See [Fields](#fields) for details.
 - `credits`: includes the information to show in attribution.(`imageUrl`, `link`, `title`).
+- `singleTile`: By default, WMS is invoked using tiled requests. If you want to use a single tile request, you can set this property to `true`.
+- `tileSize`: defines the size of the tiles in pixels for tiled requests. It is a number and it can be `256` or `512`. Default is `256`.
 
 ##### Fields
 
@@ -307,12 +308,6 @@ Some other feature will break, for example the layer properties will stop workin
     "https://d.maps.geosolutionsgroup.com/geoserver/wms",
     "https://e.maps.geosolutionsgroup.com/geoserver/wms",
     "https://f.maps.geosolutionsgroup.com/geoserver/wms"
-    "https://a.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://b.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://c.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://d.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://e.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://f.maps.geosolutionsgroup.com/geoserver/wms"
   ],
   "visibility": true,
   "opacity": 1,
@@ -350,9 +345,7 @@ in `localConfig.json`
     "cfg": {
         "additionalLayers": [{
             "url": "http...",
-            "url": "http...",
             "format": "application/bil16",
-            "type": "wms",
             "type": "wms",
             ...
             "name": "elevation",
@@ -1314,6 +1307,47 @@ i.e.
 }
 ```
 
+#### ArcGIS MapServer layer
+
+This layer type allows to render an ArcGIS MapServer layer.
+
+An ArcGIS MapServer source is a composition of different layers to create a map. The layer is identified by the `arcgis` type, containing `url` and `options.layers` properties . e.g.
+
+```json
+{
+    "type": "arcgis",
+    "url": "https://arcgis-example/rest/services/MyService/MapServer",
+    "options": {
+      "layers": [{ "id": 0 }, { "id": 1 }]
+    },
+    "title": "Title",
+    "group": "",
+    "visibility": true
+}
+```
+
+Where:
+
+- `url` is the URL of the MapServer source.
+- `options.layers` is the list of object containing the ids of the layers. Required to support `queriable` option and legend support.
+- `name` (optional). When present, the MapStore layer will show only the layer with the id specified in the `name` attribute. e.g.
+
+```json
+{
+    "type": "arcgis",
+    "name": "0",
+    "url": "https://arcgis-example/rest/services/MyService/MapServer"
+    "url": "https://arcgis-example/rest/services/MyService/MapServer",
+    "options": {
+      "layers": [{ "id": 0 }, { "id": 1 }]
+    },
+    "title": "Title",
+    "group": "",
+    "visibility": true,
+    "queriable": true
+}
+```
+
 ## Layer groups
 
 Inside the map configuration, near the `layers` entry, you can find also the `groups` entry. This array contains information about the groups in the TOC.
@@ -1466,7 +1500,6 @@ Openlayers:
 
 Cesium:
 
-- `tileDiscardPolicy` sets a policy for discarding (missing/broken) tiles ([https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html](https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html)). If it is not specified the NeverTileDiscardPolicy will be used. If "none" is specified, no policy at all will be set.
 - `tileDiscardPolicy` sets a policy for discarding (missing/broken) tiles ([https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html](https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html)). If it is not specified the NeverTileDiscardPolicy will be used. If "none" is specified, no policy at all will be set.
 
 MapStore specific:

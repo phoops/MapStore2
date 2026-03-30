@@ -12,15 +12,18 @@ import expect from 'expect';
 import RasterAdvancedSettings from "../RasterAdvancedSettings";
 import TestUtils from "react-dom/test-utils";
 import { waitFor } from '@testing-library/react';
+import { setConfigProp } from "../../../../../utils/ConfigUtils";
 
 describe('Test Raster advanced settings', () => {
     beforeEach((done) => {
         document.body.innerHTML = '<div id="container"></div>';
+        setConfigProp('miscSettings', { experimentalInteractiveLegend: true });
         setTimeout(done);
     });
     afterEach((done) => {
         ReactDOM.unmountComponentAtNode(document.getElementById("container"));
         document.body.innerHTML = '';
+        setConfigProp('miscSettings', { });
         setTimeout(done);
     });
     it('creates the component with defaults', () => {
@@ -33,10 +36,28 @@ describe('Test Raster advanced settings', () => {
         const advancedSettingPanel = document.getElementsByClassName("mapstore-switch-panel");
         expect(advancedSettingPanel).toBeTruthy();
         const fields = document.querySelectorAll(".form-group");
-        expect(fields.length).toBe(14);
+        expect(fields.length).toBe(15);
+    });
+    it('test wms advanced options with no vendor serverType', () => {
+        ReactDOM.render(<RasterAdvancedSettings service={{type: "wms", autoload: false, layerOptions: {serverType: 'no-vendor'}}} isLocalizedLayerStylesEnabled/>, document.getElementById("container"));
+        const advancedSettingPanel = document.getElementsByClassName("mapstore-switch-panel");
+        expect(advancedSettingPanel).toBeTruthy();
+        const fields = document.querySelectorAll(".form-group");
+        expect(fields.length).toBe(13);
     });
     it('test csw advanced options', () => {
         ReactDOM.render(<RasterAdvancedSettings service={{type: "csw", autoload: false}}/>, document.getElementById("container"));
+        const advancedSettingPanel = document.getElementsByClassName("mapstore-switch-panel");
+        expect(advancedSettingPanel).toBeTruthy();
+        const fields = document.querySelectorAll(".form-group");
+        const cswFilters = document.getElementsByClassName("catalog-csw-filters");
+        const sortBy = document.getElementsByClassName("sort-by");
+        expect(fields.length).toBe(13);
+        expect(cswFilters).toBeTruthy();
+        expect(sortBy).toBeTruthy();
+    });
+    it('test csw advanced options with no vendor serverType', () => {
+        ReactDOM.render(<RasterAdvancedSettings service={{type: "csw", autoload: false, layerOptions: {serverType: 'no-vendor'}}}/>, document.getElementById("container"));
         const advancedSettingPanel = document.getElementsByClassName("mapstore-switch-panel");
         expect(advancedSettingPanel).toBeTruthy();
         const fields = document.querySelectorAll(".form-group");
@@ -220,7 +241,7 @@ describe('Test Raster advanced settings', () => {
         />, document.getElementById("container"));
         const advancedSettingsPanel = document.getElementsByClassName("mapstore-switch-panel");
         expect(advancedSettingsPanel).toBeTruthy();
-        const formGroup = document.querySelectorAll('.form-group')[6];
+        const formGroup = document.querySelectorAll('.form-group')[7];
         expect(formGroup.textContent.trim()).toBe('layerProperties.useCacheOptionInfo.label');
         const useCacheOption = formGroup.querySelector('input[type="checkbox"]');
         expect(useCacheOption).toBeTruthy();

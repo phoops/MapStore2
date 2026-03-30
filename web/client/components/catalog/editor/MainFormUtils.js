@@ -9,7 +9,8 @@ export const defaultPlaceholder = (service) => {
         "tms": "e.g. https://mydomain.com/geoserver/gwc/service/tms/1.0.0",
         "3dtiles": "e.g. https://mydomain.com/tileset.json",
         "cog": "e.g. https://mydomain.com/cog.tif",
-        "model": "e.g. https://mydomain.com/filename.ifc"
+        "model": "e.g. https://mydomain.com/filename.ifc",
+        "arcgis": "e.g. https://mydomain.com/arcgis/rest/services"
     };
     for ( const [key, value] of Object.entries(urlPlaceholder)) {
         if ( key === service.type) {
@@ -24,13 +25,18 @@ export const defaultPlaceholder = (service) => {
  * @param {string} catalogUrl The URL of the catalog
  * @param {string} currentLocation The current location, by default `window.location.href`
  * @param {boolean} allowUnsecureLayers flag to allow unsecure url
- * @returns {boolean} true if the URL is valid
+ * @returns {object} {valid: boolean, errorMsgId: string}
  */
-export const isValidURL = (catalogUrl = '', currentLocation, allowUnsecureLayers) => {
-    const { protocol: mapStoreProtocol } = url.parse(currentLocation ?? window.location.href);
-    const { protocol: catalogProtocol } = url.parse(catalogUrl);
-    if (mapStoreProtocol === 'https:' && !!catalogProtocol) {
-        return (mapStoreProtocol === catalogProtocol || allowUnsecureLayers);
+export const checkUrl = (catalogUrl = '', currentLocation, allowUnsecureLayers) => {
+    try {
+        const { protocol: mapStoreProtocol } = url.parse(currentLocation ?? window.location.href);
+        const { protocol: catalogProtocol } = url.parse(catalogUrl);
+        if (mapStoreProtocol === 'https:' && !!catalogProtocol) {
+            const isProtocolValid = (mapStoreProtocol === catalogProtocol || allowUnsecureLayers);
+            return isProtocolValid ? {valid: true} : {valid: false, errorMsgId: "catalog.invalidUrlHttpProtocol"};
+        }
+        return {valid: true};
+    } catch (e) {
+        return {valid: false, errorMsgId: "catalog.invalidArrayUsageForUrl"};
     }
-    return true;
 };
