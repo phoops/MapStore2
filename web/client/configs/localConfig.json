@@ -59,7 +59,8 @@
     "authenticationProviders": [
       {
         "type": "openID",
-        "provider": "keycloak"
+        "provider": "keycloak",
+        "title": "Autenticazione con ARPA"
       },
       {
         "type": "basic",
