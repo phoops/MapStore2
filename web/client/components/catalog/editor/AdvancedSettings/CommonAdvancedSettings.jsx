@@ -24,30 +24,24 @@ export default ({
     service,
     onChangeServiceProperty = () => { },
     onToggleThumbnail = () => { }
-}) => (
-    <>
-        <FormGroup controlId="autoload" key="autoload">
-            {service.autoload !== undefined && <Checkbox value="autoload" onChange={(e) => onChangeServiceProperty("autoload", e.target.checked)}
-                checked={!isNil(service.autoload) ? service.autoload : false}>
-                <Message msgId="catalog.autoload" />
-            </Checkbox>}
-        </FormGroup>
-        <FormGroup controlId="thumbnail" key="thumbnail">
-            <Checkbox
-                onChange={() => onToggleThumbnail()}
-                checked={!isNil(service.hideThumbnail) ? !service.hideThumbnail : true}>
-                <Message msgId="catalog.showPreview" />
-            </Checkbox>
-        </FormGroup>
-        {!isNil(service.type) && service.type === "wfs" &&
-            <FormGroup controlId="allowUnsecureLayers" key="allowUnsecureLayers">
+}) => {
+    return (
+        <>
+            <FormGroup controlId="autoload" key="autoload">
+                {service.autoload !== undefined && <Checkbox value="autoload" onChange={(e) => onChangeServiceProperty("autoload", e.target.checked)}
+                    checked={!isNil(service.autoload) ? service.autoload : false}>
+                    <Message msgId="catalog.autoload" />
+                </Checkbox>}
+            </FormGroup>
+            <FormGroup controlId="thumbnail" key="thumbnail">
                 <Checkbox
-                    onChange={(e) => onChangeServiceProperty("allowUnsecureLayers", e.target.checked)}
-                    checked={!isNil(service.allowUnsecureLayers) ? service.allowUnsecureLayers : false}>
-                    <Message msgId="catalog.allowUnsecureLayers.label" />&nbsp;<InfoPopover text={<Message msgId="catalog.allowUnsecureLayers.tooltip" />} />
+                    onChange={() => onToggleThumbnail()}
+                    checked={!isNil(service.hideThumbnail) ? !service.hideThumbnail : true}>
+                    <Message msgId="catalog.showPreview" />
                 </Checkbox>
-            </FormGroup>}
-        {!isNil(service.type) && service.type === "cog" &&
+            </FormGroup>
+
+            {!isNil(service.type) && service.type === "cog" &&
             <FormGroup controlId="fetchMetadata" key="fetchMetadata">
                 <Checkbox
                     onChange={(e) => onChangeServiceProperty("fetchMetadata", e.target.checked)}
@@ -55,6 +49,15 @@ export default ({
                     <Message msgId="catalog.fetchMetadata.label" />&nbsp;<InfoPopover text={<Message msgId="catalog.fetchMetadata.tooltip" />} />
                 </Checkbox>
             </FormGroup>}
-        {children}
-    </>
-);
+            {['wfs', 'vector'].includes(service.type) && <FormGroup className="wfs-vector-interactive-legend" controlId="enableInteractiveLegend" key="enableInteractiveLegend">
+                <Checkbox data-qa="display-interactive-legend-option"
+                    onChange={(e) => onChangeServiceProperty("layerOptions", { ...service.layerOptions, enableInteractiveLegend: e.target.checked})}
+                    checked={!isNil(service.layerOptions?.enableInteractiveLegend) ? service.layerOptions?.enableInteractiveLegend : false}>
+                    <Message msgId="layerProperties.enableInteractiveLegendInfo.label" />
+                &nbsp;<InfoPopover text={<Message msgId="layerProperties.enableInteractiveLegendInfo.infoWithoutGSNote" />} />
+                </Checkbox>
+            </FormGroup>}
+            {children}
+        </>
+    );
+};

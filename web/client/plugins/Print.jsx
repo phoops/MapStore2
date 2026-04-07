@@ -36,6 +36,9 @@ import { getDerivedLayersVisibility, isInsideResolutionsLimits } from '../utils/
 import { has, includes } from 'lodash';
 import {additionalLayersSelector} from "../selectors/additionallayers";
 import { MapLibraries } from '../utils/MapTypeUtils';
+import FlexBox from '../components/layout/FlexBox';
+import Text from '../components/layout/Text';
+import Button from '../components/layout/Button';
 
 /**
  * Print plugin. This plugin allows to print current map view. **note**: this plugin requires the  **printing module** to work.
@@ -101,6 +104,8 @@ import { MapLibraries } from '../utils/MapTypeUtils';
  * @prop {object} cfg.outputFormatOptions options for the output formats
  * @prop {object[]} cfg.outputFormatOptions.allowedFormats array of allowed formats, e.g. [{"name": "PDF", "value": "pdf"}]
  * @prop {object} cfg.projectionOptions options for the projections
+ * @prop {string[]} cfg.excludeLayersFromLegend list of layer names e.g. ["workspace:layerName"] to exclude from printed document
+ * @prop {object} cfg.mergeableParams object to pass to mapfish-print v2 to merge params, example here https://github.com/mapfish/mapfish-print-v2/blob/main/docs/protocol.rst#printpdf
  * @prop {object[]} cfg.projectionOptions.projections array of available projections, e.g. [{"name": "EPSG:3857", "value": "EPSG:3857"}]
  * @prop {object} cfg.overlayLayersOptions options for overlay layers
  * @prop {boolean} cfg.overlayLayersOptions.enabled if true a checkbox will be shown to exclude or include overlay layers to the print
@@ -288,6 +293,8 @@ export default {
                         currentLocale: PropTypes.string,
                         overrideOptions: PropTypes.object,
                         items: PropTypes.array,
+                        excludeLayersFromLegend: PropTypes.array,
+                        mergeableParams: PropTypes.object,
                         addPrintParameter: PropTypes.func,
                         printingService: PropTypes.object,
                         printMap: PropTypes.object
@@ -309,6 +316,7 @@ export default {
                         onPrint: () => {},
                         configurePrintMap: () => {},
                         printSpecTemplate: {},
+                        excludeLayersFromLegend: [],
                         getLayoutName: getLayoutName,
                         getZoomForExtent: defaultGetZoomForExtent,
                         pdfUrl: null,
@@ -319,9 +327,9 @@ export default {
                         usePreview: true,
                         mapPreviewOptions: {
                             enableScalebox: false,
-                            enableRefresh: false
+                            enableRefresh: true
                         },
-                        syncMapPreview: true,
+                        syncMapPreview: false,      // make it false to prevent map sync
                         useFixedScales: false,
                         scales: [],
                         ignoreLayers: ["google", "bing"],
@@ -344,13 +352,13 @@ export default {
                         printingService: getDefaultPrintingService(),
                         printMap: {}
                     };
-
-                    state = {
-                        activeAccordionPanel: 0
-                    }
-
-                    UNSAFE_componentWillMount() {
+                    constructor(props) {
+                        super(props);
+                        // Calling configurePrintMap here to replace calling in in UNSAFE_componentWillMount
                         this.configurePrintMap();
+                        this.state = {
+                            activeAccordionPanel: 0
+                        };
                     }
 
                     UNSAFE_componentWillReceiveProps(nextProps) {
@@ -516,7 +524,14 @@ export default {
                                     </Panel>);
                                 }
                                 return (<Dialog start={{x: 0, y: 80}} id="mapstore-print-panel" style={{ zIndex: 1990, ...this.props.style}}>
-                                    <span role="header"><span className="print-panel-title"><Message msgId="print.paneltitle"/></span><button onClick={this.props.toggleControl} className="print-panel-close close">{this.props.closeGlyph ? <Glyphicon glyph={this.props.closeGlyph}/> : <span>×</span>}</button></span>
+                                    <FlexBox role="header" centerChildrenVertically gap="sm">
+                                        <FlexBox.Fill component={Text} ellipsis fontSize="md" className="print-panel-title _padding-lr-sm">
+                                            <Message msgId="print.paneltitle"/>
+                                        </FlexBox.Fill>
+                                        <Button onClick={this.props.toggleControl} square borderTransparent className="print-panel-close">
+                                            {this.props.closeGlyph ? <Glyphicon glyph={this.props.closeGlyph}/> : <span>×</span>}
+                                        </Button>
+                                    </FlexBox>
                                     {this.renderBody()}
                                 </Dialog>);
                             }
@@ -604,8 +619,11 @@ export default {
                         this.props.setPage(0);
                         this.props.onBeforePrint();
                         this.props.printingService.print({
+                            excludeLayersFromLegend: this.props.excludeLayersFromLegend,
+                            mergeableParams: this.props.mergeableParams,
                             layers: this.getMapConfiguration()?.layers,
-                            scales: this.props.useFixedScales ? getPrintScales(this.props.capabilities) : undefined
+                            scales: this.props.useFixedScales ? getPrintScales(this.props.capabilities) : undefined,
+                            bbox: this.props.map?.bbox
                         })
                             .then((spec) =>
                                 this.props.onPrint(this.props.capabilities.createURL, { ...spec, ...this.props.overrideOptions })

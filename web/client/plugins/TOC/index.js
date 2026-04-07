@@ -56,7 +56,7 @@ registerCustomSaveHandler('toc', (state) => (state?.toc?.config));
  * @name TOC
  * @class
  * @prop {boolean} cfg.activateFilterLayer: activate filter layers tool, default `true`
- * @prop {boolean} cfg.activateMapTitle: show map title, default `true`
+ * @prop {boolean} cfg.activateMapTitle: show map title, default `false`
  * @prop {boolean} cfg.activateToolsContainer: activate layers and group global toolbar, default `true`
  * @prop {boolean} cfg.activateRemoveLayer: activate remove layer tool, default `true`
  * @prop {boolean} cfg.activateRemoveGroup if set to false, do not show the remove button for layer groups. default `true`
@@ -339,7 +339,7 @@ function TOC({
     user,
     title,
     activateFilterLayer = true,
-    activateMapTitle = true,
+    activateMapTitle = false,
     activateToolsContainer = true,
     activateZoomTool = true,
     hideOpacitySlider = false,
@@ -354,6 +354,9 @@ function TOC({
 
     groupOptions = {},
     layerOptions = {},
+    projection,
+    mapSize,
+    mapBbox,
     currentLocale,
     language,
     scales,
@@ -499,7 +502,13 @@ function TOC({
                     groupOptions,
                     layerOptions: {
                         ...layerOptions,
-                        hideLegend: !activateLegendTool
+                        hideLegend: !activateLegendTool,
+                        legendOptions: {
+                            ...layerOptions?.legendOptions,
+                            projection,
+                            mapSize,
+                            mapBbox
+                        }
                     }
                 }}
                 onContextMenu={({ event, node: currentNode, nodeType, parentId }) => {
@@ -599,7 +608,10 @@ const tocSelector = createShallowSelectorCreator(isEqual)(
             map && map.projection || 'EPSG:3857',
             map && map.mapOptions && map.mapOptions.view && map.mapOptions.view.DPI || null
         ),
+        projection: map && map.projection || 'EPSG:3857',
         zoom: map?.zoom,
+        mapSize: map?.size,
+        mapBbox: map?.bbox,
         resolutions,
         resolution,
         visualizationMode,
@@ -628,7 +640,6 @@ export default createPlugin('TOC', {
             position: 1,
             glyph: '1-layer',
             buttonConfig: {
-                buttonClassName: 'square-button no-border',
                 tooltip: 'toc.layers'
             },
             priority: 2

@@ -6,12 +6,12 @@ import url from 'url';
  * @param {boolean} allowUnsecureLayers flag to allow unsecure url
  * @returns {object} {valid: boolean, errorMsgId: string}
  */
-export const checkUrl = (catalogUrl = '', currentLocation, allowUnsecureLayers) => {
+export const checkUrl = (catalogUrl = '', currentLocation) => {
     try {
         const { protocol: mapStoreProtocol } = url.parse(currentLocation ?? window.location.href);
         const { protocol: catalogProtocol } = url.parse(catalogUrl);
         if (mapStoreProtocol === 'https:' && !!catalogProtocol) {
-            const isProtocolValid = (mapStoreProtocol === catalogProtocol || allowUnsecureLayers);
+            const isProtocolValid = (mapStoreProtocol === catalogProtocol);
             return isProtocolValid ? {valid: true} : {valid: false, errorMsgId: "catalog.invalidUrlHttpProtocol"};
         }
         return {valid: true};

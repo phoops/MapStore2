@@ -52,7 +52,8 @@ import { createControlEnabledSelector, measureSelector } from '../selectors/cont
 import { localizedLayerStylesEnvSelector } from '../selectors/localizedLayerStyles';
 import { mouseOutSelector } from '../selectors/mousePosition';
 import { hideEmptyPopupSelector } from '../selectors/mapPopups';
-import {getBbox, getCurrentResolution, parseLayoutValue} from '../utils/MapUtils';
+import {getBbox, getCurrentResolution} from '../utils/MapUtils';
+import { parseLayoutValue } from '../utils/LayoutUtils';
 import {buildIdentifyRequest, defaultQueryableFilter, filterRequestParams} from '../utils/MapInfoUtils';
 import { IDENTIFY_POPUP } from '../components/map/popups';
 
@@ -261,7 +262,7 @@ export const zoomToVisibleAreaEpic = (action$, store) =>
                     const state = store.getState();
                     const hideIdentifyPopupIfNoResults = hideEmptyPopupSelector(state);
                     const hoverIdentifyActive = isMouseMoveIdentifyActiveSelector(state);
-                    const noResultFeatures = loadFeatInfoAction.type === LOAD_FEATURE_INFO && loadFeatInfoAction?.data?.includes("no features were found");
+                    const noResultFeatures = loadFeatInfoAction.type === LOAD_FEATURE_INFO && typeof loadFeatInfoAction?.data === "string" && loadFeatInfoAction?.data?.includes("no features were found");
                     // remove marker in case activated identify hover mode and no fetched results plus existing hideIdentifyPopupIfNoResults = true
                     if (noResultFeatures && hideIdentifyPopupIfNoResults && hoverIdentifyActive) {
                         return Rx.Observable.from([updateCenterToMarker('disabled'), hideMapinfoMarker()]);

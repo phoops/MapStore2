@@ -61,30 +61,6 @@ describe('Test common advanced settings', () => {
         expect(spyOn).toHaveBeenCalled();
         expect(spyOn.calls[0].arguments).toEqual([ 'autoload', true ]);
     });
-    it('test component onChangeServiceProperty allowUnsecureLayers', () => {
-        const action = {
-            onChangeServiceProperty: () => {}
-        };
-        const spyOn = expect.spyOn(action, 'onChangeServiceProperty');
-        ReactDOM.render(<CommonAdvancedSettings
-            onChangeServiceProperty={action.onChangeServiceProperty}
-            service={{type: "wfs", allowUnsecureLayers: false}}
-        />, document.getElementById("container"));
-        const advancedSettingsPanel = document.getElementsByClassName("mapstore-switch-panel");
-        expect(advancedSettingsPanel).toBeTruthy();
-        const allowUnsecureLayers = document.querySelectorAll('input[type="checkbox"]')[1];
-        const formGroup = document.querySelectorAll('.form-group')[2];
-        expect(formGroup.textContent.trim()).toBe('catalog.allowUnsecureLayers.label');
-        expect(allowUnsecureLayers).toExist();
-        TestUtils.Simulate.change(allowUnsecureLayers, { "target": { "checked": true }});
-        expect(spyOn).toHaveBeenCalled();
-        expect(spyOn.calls[0].arguments).toEqual([ 'allowUnsecureLayers', true ]);
-
-        // Unset allowUnsecureLayers
-        TestUtils.Simulate.change(allowUnsecureLayers, { "target": { "checked": false }});
-        expect(spyOn).toHaveBeenCalled();
-        expect(spyOn.calls[1].arguments).toEqual([ 'allowUnsecureLayers', false ]);
-    });
     it('test component onChangeServiceProperty fetchMetadata', () => {
         const action = {
             onChangeServiceProperty: () => {}
@@ -108,5 +84,25 @@ describe('Test common advanced settings', () => {
         TestUtils.Simulate.change(fetchMetadata, { "target": { "checked": false }});
         expect(spyOn).toHaveBeenCalled();
         expect(spyOn.calls[1].arguments).toEqual([ 'fetchMetadata', false ]);
+    });
+    it('test showing/hiding interactive legend checkbox for WFS', () => {
+        ReactDOM.render(<CommonAdvancedSettings
+            service={{type: "wfs"}}
+        />, document.getElementById("container"));
+        const interactiveLegendCheckboxInput = document.querySelector(".wfs-vector-interactive-legend .checkbox input[data-qa='display-interactive-legend-option']");
+        expect(interactiveLegendCheckboxInput).toBeTruthy();
+        const interactiveLegendLabel = document.querySelector(".wfs-vector-interactive-legend .checkbox span");
+        expect(interactiveLegendLabel).toBeTruthy();
+        expect(interactiveLegendLabel.innerHTML).toEqual('layerProperties.enableInteractiveLegendInfo.label');
+    });
+    it('test showing/hiding interactive legend checkbox for vector', () => {
+        ReactDOM.render(<CommonAdvancedSettings
+            service={{type: "vector"}}
+        />, document.getElementById("container"));
+        const interactiveLegendCheckboxInput = document.querySelector(".wfs-vector-interactive-legend .checkbox input[data-qa='display-interactive-legend-option']");
+        expect(interactiveLegendCheckboxInput).toBeTruthy();
+        const interactiveLegendLabel = document.querySelector(".wfs-vector-interactive-legend .checkbox span");
+        expect(interactiveLegendLabel).toBeTruthy();
+        expect(interactiveLegendLabel.innerHTML).toEqual('layerProperties.enableInteractiveLegendInfo.label');
     });
 });

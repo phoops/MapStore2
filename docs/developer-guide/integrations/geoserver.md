@@ -7,7 +7,20 @@ MapStore can share users, groups an roles with GeoServer. This type of integrati
 This guide explains how to share users, groups and roles between MapStore and GeoServer.
 Applying this configurations will allow users logged in MapStore to be recognized by GeoServer. So security rules about restrictions on services, layers and so on can be correctly applied to MapStore users (also using [GeoFence](https://docs.geoserver.org/latest/en/user/extensions/geofence-server/index.html)).
 
-<img src="../img/mapstore-geoserver-users-integration.png" class="ms-docimage"/>
+```mermaid
+sequenceDiagram
+    actor User
+    participant GeoServer
+    participant MapStore
+    participant UserGroup Service/Role Service
+    User ->>+ GeoServer:  OGC Request <br />(w/authkey)
+    GeoServer ->>+ MapStore: authkey
+    MapStore ->>- GeoServer: username
+    GeoServer ->>+ UserGroup Service/Role Service: username
+    UserGroup Service/Role Service ->>- GeoServer: User(groups, roles)
+    Note over GeoServer: Filter/Allow/Deny data access <br /> by Resource Access Manager
+    GeoServer ->>- User: data
+```
 
 !!! note
     **UserGroup Service/Role Service** can be *MapStore database* or *LDAP* depending on the setup you prefer.
@@ -31,6 +44,9 @@ This solution partially degradates the functionalities of user management UI of 
 
 This example will focus on **PostgreSQL** database type
 I am assuming this is a new installation, so no existing user or map will be preserved
+
+!!! Warning
+    If you make a mistake in the above procedures and log out, you may not be able to log in again or you may lose your administrator rights. For this reason, it is recommended that you make a backup of your GeoServer data directory before starting the setup. If you encounter any problems, you can restore the backup and start over.
 
 ## Database preparation
 
@@ -90,6 +106,7 @@ Steps below reference user, group and role service configuration files, as neede
 - go Again in JDBC Role Service `geostore`
 - select Administrator role to `ADMIN`
 - select Group Administrator Role to `ADMIN`
+- click on "Save" button again
 
 ### Use these services as default
 

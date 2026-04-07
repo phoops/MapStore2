@@ -23,7 +23,6 @@ import '../plugins/GraticuleLayer';
 import '../plugins/OverlayLayer';
 import '../plugins/TMSLayer';
 import '../plugins/WFSLayer';
-import '../plugins/WFS3Layer';
 import '../plugins/ElevationLayer';
 import '../plugins/ArcGISLayer';
 
@@ -320,6 +319,37 @@ describe('Openlayers layer', () => {
         );
         expect(layer).toBeTruthy();
         expect(map.getLayers().getLength()).toBe(1);
+    });
+    it('render wms singleTile layer with error', (done) => {
+        mockAxios.onGet().reply(r => {
+            expect(r.url.indexOf('SAMPLE_URL') >= 0 ).toBeTruthy();
+            return [200, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            "<ows:ExceptionReport xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
+            "  <ows:Exception exceptionCode=\"InvalidParameterValue\" locator=\"srsname\">\n" +
+            "    <ows:ExceptionText>msWFSGetFeature(): WFS server error. Invalid GetFeature Request</ows:ExceptionText>\n" +
+            "  </ows:Exception>\n" +
+            "</ows:ExceptionReport>"];
+        });
+        const options = {
+            type: 'wms',
+            visibility: true,
+            singleTile: true,
+            url: 'SAMPLE_URL',
+            name: 'osm:vector_tile'
+        };
+        const layer = ReactDOM.render(<OpenlayersLayer
+            type="wms"
+            options={{
+                ...options
+            }}
+            map={map} />, document.getElementById("container"));
+        expect(layer.layer.getSource()).toBeTruthy();
+        layer.layer.getSource().on('imageloaderror', (e)=> {
+            setTimeout(() => {
+                expect(e).toBeTruthy();
+                done();
+            }, 200);
+        });
     });
     it('creates a tiled wms layer for openlayers map with long url', (done) => {
         let options = {
@@ -1472,7 +1502,65 @@ describe('Openlayers layer', () => {
         // count layers
         expect(map.getLayers().getLength()).toBe(1);
     });
+    it('creates a vector layer for openlayers map with interactive legend filter', () => {
+        const options = {
+            type: 'vector',
+            features: [
+                { type: 'Feature', properties: { "prop1": 0 }, geometry: { type: 'Point', coordinates: [0, 0] } },
+                { type: 'Feature', properties: { "prop1": 2 }, geometry: { type: 'Point', coordinates: [1, 0] } },
+                { type: 'Feature', properties: { "prop1": 5 }, geometry: { type: 'Point', coordinates: [2, 0] } }
+            ],
+            title: 'Title',
+            visibility: true,
+            bbox: {
+                crs: 'EPSG:4326',
+                bounds: {
+                    minx: -180,
+                    miny: -90,
+                    maxx: 180,
+                    maxy: 90
+                }
+            },
+            enableInteractiveLegend: true,
+            layerFilter: {
+                filters: [{
+                    "id": "interactiveLegend",
+                    "format": "logic",
+                    "version": "1.0.0",
+                    "logic": "OR",
+                    "filters": [
+                        {
+                            "format": "geostyler",
+                            "version": "1.0.0",
+                            "body": [
+                                "&&",
+                                [
+                                    ">",
+                                    "prop1",
+                                    "0"
+                                ], [
+                                    "<",
+                                    "prop1",
+                                    "3"
+                                ]
+                            ],
+                            "id": "&&,>,prop1,0,<,prop1,3"
+                        }
+                    ]
+                }]
+            }
+        };
+        // create layers
+        var layer = ReactDOM.render(
+            <OpenlayersLayer type="vector"
+                options={options} map={map}/>, document.getElementById("container"));
 
+        expect(layer).toBeTruthy();
+        // count layers
+        const renderedFeatsNum = map.getLayers().getLength();
+        const filteredFeatsNum = 1;
+        expect(renderedFeatsNum).toEqual(filteredFeatsNum);
+    });
     it('change layer visibility for Google Layer', () => {
         var google = {
             maps: {
@@ -2876,78 +2964,6 @@ describe('Openlayers layer', () => {
             }}
             map={map} />, document.getElementById("container"));
         expect(layer.layer.getSource()).toBeTruthy();
-    });
-
-    it('test render a wfs3 layer', () => {
-
-        const options = {
-            id: 'layer_id',
-            name: 'layer_name',
-            title: 'Layer Title',
-            type: 'wfs3',
-            visibility: true,
-            url: '/geoserver/wfs3/collections/layer_name/tiles/{tilingSchemeId}/{level}/{row}/{col}',
-            format: 'application/vnd.mapbox-vector-tile',
-            tilingScheme: '/geoserver/wfs3/collections/layer_name/tiles/{tilingSchemeId}',
-            tilingSchemes: {
-                url: '/geoserver/wfs3/collections/layer_name/tiles',
-                schemes: [
-                    {
-                        type: 'TileMatrixSet',
-                        identifier: 'GoogleMapsCompatible',
-                        title: 'GoogleMapsCompatible',
-                        supportedCRS: 'EPSG:3857',
-                        tileMatrix: [{
-                            matrixHeight: 1,
-                            matrixWidth: 1,
-                            tileHeight: 256,
-                            tileWidth: 256,
-                            identifier: '0',
-                            scaleDenominator: 559082263.9508929,
-                            topLeftCorner: [
-                                -20037508.34,
-                                20037508
-                            ],
-                            type: 'TileMatrix'
-                        }],
-                        boundingBox: {
-                            crs: 'http://www.opengis.net/def/crs/EPSG/0/3857',
-                            lowerCorner: [
-                                -20037508.34,
-                                -20037508.34
-                            ],
-                            upperCorner: [
-                                20037508.34,
-                                20037508.34
-                            ],
-                            type: 'BoundingBox'
-                        },
-                        wellKnownScaleSet: 'http://www.opengis.net/def/wkss/OGC/1.0/GoogleMapsCompatible'
-                    }
-                ]
-            },
-            bbox: {
-                crs: 'EPSG:4326',
-                bounds: {
-                    minx: -156.2575,
-                    miny: -90,
-                    maxx: 123.33333333333333,
-                    maxy: 46.5475
-                }
-            },
-            allowedSRS: {
-                'EPSG:3857': true
-            }
-        };
-        let layer = ReactDOM.render(<OpenlayersLayer
-            type="wfs3"
-            options={options}
-            map={map}/>, document.getElementById("container"));
-
-        expect(layer).toBeTruthy();
-        expect(map.getLayers().getLength()).toBe(1);
-        expect(layer.layer.constructor.name).toBe('VectorTileLayer');
-        expect(layer.layer.getSource().format_.constructor.name).toBe('MVT');
     });
 
     it('should apply native ol min and max resolution on wms layer', () => {

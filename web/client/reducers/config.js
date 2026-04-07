@@ -18,7 +18,6 @@ import {
     RESET_MAP_SAVE_ERROR
 } from '../actions/config';
 
-import { MAP_CREATED } from '../actions/maps';
 import { DETAILS_LOADED } from '../actions/details';
 import { MAP_TYPE_CHANGED, VISUALIZATION_MODE_CHANGED } from '../actions/maptype';
 import assign from 'object-assign';
@@ -35,6 +34,9 @@ function mapConfig(state = null, action) {
     let map;
     switch (action.type) {
     case LOCATION_CHANGE: {
+        if (action?.payload?.action === 'REPLACE') {
+            return state;
+        }
         return {
             ...state,
             mapInitialConfig: {}
@@ -124,16 +126,6 @@ function mapConfig(state = null, action) {
             }});
         }
         return state;
-    case MAP_CREATED: {
-        map = state && state.map && state.map.present ? state.map.present : state && state.map;
-        if (map) {
-            const {name, description, canDelete = false, canCopy = false, canEdit = false} = action.metadata || {};
-            // version needed to avoid automapupdate to start
-            map = assign({}, map, {mapId: action.resourceId, info: {...map.info, name, description, canEdit, canDelete, canCopy}, version: 2});
-            return assign({}, state, {map: map});
-        }
-        return state;
-    }
     case MAP_SAVE_ERROR:
         map = state && state.map && state.map.present ? state.map.present : state && state.map;
         map = set('mapSaveErrors', castArray(action.error), map);

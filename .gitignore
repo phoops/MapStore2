@@ -27,3 +27,5 @@ debug.log
 site
 .github/
 .DS_Store
+venv
+__pycache__
