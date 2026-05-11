@@ -428,7 +428,7 @@
         "cfg": {
           "containerPosition": "header",
           "logo": {
-            "src": "assets/img/logo-regione-toscana.png",
+            "src": "product/assets/img/logo-regione-toscana.png",
             "href": "/",
             "alt": "Regione Toscana"
           }

@@ -16,7 +16,7 @@ import { getMessageById } from '../../../utils/LocaleUtils';
 import '../css/security.css';
 import Button from '../../layout/Button';
 import google from './assets/google.svg';
-import keycloak from './assets/spid.svg';
+import keycloak from './assets/spid_cie.svg';
 import withTooltip from '../../misc/enhancers/tooltip';
 import FlexBox from '../../layout/FlexBox';
 
