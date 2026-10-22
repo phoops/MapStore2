@@ -944,7 +944,7 @@
           }
         }
       },
-      { "name": "Footer" },
+      { "name": "CustomFooter" },
       { "name": "About" },
       {
         "name": "Cookie",
@@ -1268,7 +1268,7 @@
       "GroupManager",
       "TagsManager",
       "IPManager",
-      "Footer",
+      "CustomFooter",
       { "name": "About" }
     ]
   }

@@ -31,6 +31,7 @@ import CameraPosition from '../plugins/CameraPosition';
 import CRSSelector from "../plugins/CRSSelector";
 
 import {toModulePlugin} from "../utils/ModulePluginsUtils";
+import CustomFooter from "../plugins/ResourcesCatalog/CustomFooter";
 
 /**
   * Please, keep them sorted alphabetically
@@ -62,6 +63,7 @@ export const plugins = {
     MapFooterPlugin: MapFooter,
     CameraPositionPlugin: CameraPosition,
     CRSSelectorPlugin: CRSSelector,
+    CustomFooter,
 
     // ### DYNAMIC PLUGINS ### //
     // product plugins
