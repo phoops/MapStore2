@@ -50,7 +50,7 @@
   },
   "authenticationRules": [
     {
-      "urlPattern": ".*geostore.*",
+      "urlPattern": ".*rest/geostore.*",
       "method": "bearer"
     },
     {
@@ -289,6 +289,7 @@
   },
   "plugins": {
     "mobile": [
+      { "name": "SecurityPopup" },
       {
         "name": "Map",
         "cfg": {
@@ -309,20 +310,7 @@
         }
       },
       "DrawerMenu",
-      {
-        "name": "BackgroundSelector",
-        "cfg": {
-          "bottom": 25,
-          "dimensions": {
-            "side": 65,
-            "sidePreview": 65,
-            "frame": 3,
-            "margin": 5,
-            "label": false,
-            "vertical": true
-          }
-        }
-      },
+      "BackgroundSelector",
       {
         "name": "Identify",
         "showIn": ["Settings"],
@@ -433,6 +421,7 @@
           }
         }
       },
+      { "name": "SecurityPopup" },
       {
         "name": "Map",
         "cfg": {
@@ -553,7 +542,12 @@
       "AddGroup",
       "TOCItemsSettings",
       "Tutorial",
-      "MapFooter",
+      {
+        "name": "MapFooter",
+        "cfg": {
+          "containerPosition": "footer"
+        }
+      },
       {
         "name": "Measure",
         "cfg": {
@@ -894,7 +888,6 @@
           ]
         }
       },
-      { "name": "TagsManager" },
       { "name": "Favorites" },
       {
         "name": "ResourcesFiltersForm",
@@ -973,6 +966,7 @@
       { "name": "Save", "cfg": { "resourceType": "DASHBOARD" } },
       { "name": "SaveAs", "cfg": { "resourceType": "DASHBOARD" } },
       "Details",
+      { "name": "SecurityPopup" },
       "AddWidgetDashboard",
       "MapConnectionDashboard",
       {
@@ -1116,6 +1110,7 @@
     ],
     "geostory-embedded": [
       "GeoStory",
+      { "name": "SecurityPopup" },
       {
         "name": "GeoStoryNavigation",
         "cfg": {
@@ -1136,9 +1131,11 @@
           "minLayoutWidth": 768
         }
       },
+      { "name": "SecurityPopup" },
       { "name": "FeedbackMask" }
     ],
     "geostory": [
+      { "name": "SecurityPopup" },
       {
         "name": "ResourceDetails",
         "cfg": { "containerPosition": "columns", "resourceType": "GEOSTORY" }
@@ -1258,6 +1255,9 @@
       "UserManager",
       "GroupManager",
       "CustomFooter",
+      "TagsManager",
+      "IPManager",
+      "Footer",
       { "name": "About" }
     ]
   }

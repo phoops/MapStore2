@@ -14,7 +14,6 @@ import isEmpty from 'lodash/isEmpty';
 import isNumber from 'lodash/isNumber';
 import StyleBasedWMSJsonLegend from './StyleBasedWMSJsonLegend';
 import Legend from './Legend';
-// import { getMiscSetting } from '../../../utils/ConfigUtils';
 /**
  * WMSLegend renders the wms legend image
  * @prop {object} node layer node options
@@ -73,7 +72,6 @@ class WMSLegend extends React.Component {
     }
     render() {
         let node = this.props.node || {};
-        // const experimentalInteractiveLegend = getMiscSetting('experimentalInteractiveLegend', false);
         const showLegend = this.canShow(node) && node.type === "wms" && node.group !== "background";
         const isJsonLegend = !!(this.props.node?.enableInteractiveLegend);
         const useOptions = showLegend && this.useLegendOptions();
