@@ -29,6 +29,7 @@ import Isochrone from "../plugins/Isochrone";
 import MapFooter from '../plugins/MapFooter';
 
 import {toModulePlugin} from "../utils/ModulePluginsUtils";
+import CustomFooter from "../plugins/ResourcesCatalog/CustomFooter";
 
 /**
   * Please, keep them sorted alphabetically
@@ -58,6 +59,7 @@ export const plugins = {
     ItineraryPlugin: Itinerary,
     IsochronePlugin: Isochrone,
     MapFooterPlugin: MapFooter,
+    CustomFooter,
 
     // ### DYNAMIC PLUGINS ### //
     // product plugins
