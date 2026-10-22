@@ -66,6 +66,17 @@
       }
     }
   ],
+  "authenticationProviders": [
+    {
+      "type": "openID",
+      "provider": "keycloak",
+      "title": "Autenticazione con ARPA"
+    },
+    {
+      "type": "basic",
+      "provider": "geostore"
+    }
+  ],
   "monitorState": [
     { "name": "router", "path": "router.location.pathname" },
     { "name": "browser", "path": "browser" },
