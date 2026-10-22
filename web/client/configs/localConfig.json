@@ -30,7 +30,6 @@
   "mapboxAccessToken": "__ACCESS_TOKEN_MAPBOX__",
   "initialMapFilter": "",
   "ignoreMobileCss": false,
-  "useAuthenticationRules": true,
   "loadAfterTheme": true,
   "defaultMapOptions": {
     "cesium": {
@@ -41,6 +40,11 @@
       "depthTestAgainstTerrain": false,
       "terrainProvider": {
         "type": "ellipsoid"
+      },
+      "zoomToExtentSettings": {
+        "minRadius": 10,
+        "fitFactor": 2.0,
+        "maxZoom": 20
       }
     },
     "floatingIdentifyDelay": 1000
@@ -48,25 +52,18 @@
   "localizedLayerStyles": {
     "name": "mapstore_language"
   },
-  "authenticationRules": [
+  "requestsConfigurationRules": [
     {
       "urlPattern": ".*rest/geostore.*",
-      "method": "bearer"
+      "headers": {
+        "Authorization": "Bearer ${securityToken}"
+      }
     },
     {
       "urlPattern": ".*rest/config.*",
-      "method": "bearer"
-    }
-  ],
-  "authenticationProviders": [
-    {
-      "type": "openID",
-      "provider": "keycloak",
-      "title": "Autenticazione con ARPA"
-    },
-    {
-      "type": "basic",
-      "provider": "geostore"
+      "headers": {
+        "Authorization": "Bearer ${securityToken}"
+      }
     }
   ],
   "monitorState": [
@@ -413,18 +410,14 @@
       {
         "name": "BrandNavbar",
         "cfg": {
-          "containerPosition": "header",
-          "logo": {
-            "src": "product/assets/img/logo-regione-toscana.png",
-            "href": "/",
-            "alt": "Regione Toscana"
-          }
+          "containerPosition": "header"
         }
       },
       { "name": "SecurityPopup" },
       {
         "name": "Map",
         "cfg": {
+          "containerPosition": "background",
           "mapOptions": {
             "openlayers": {
               "interactions": {
@@ -491,7 +484,12 @@
         }
       },
       "Home",
-      "FeatureEditor",
+      {
+        "name": "FeatureEditor",
+        "cfg": {
+          "containerPosition": "bottom"
+        }
+      },
       "LayerDownload",
       {
         "name": "QueryPanel",
@@ -592,9 +590,11 @@
       {
         "name": "CRSSelector",
         "cfg": {
-          "additionalCRS": {},
-          "filterAllowedCRS": ["EPSG:4326", "EPSG:3857"],
-          "allowedRoles": ["ADMIN"]
+          "allowedRoles": ["ADMIN"],
+          "availableProjections": [
+            { "value": "EPSG:4326", "label": "EPSG:4326" },
+            { "value": "EPSG:3857", "label": "EPSG:3857" }
+          ]
         }
       },
       {
@@ -944,7 +944,7 @@
           }
         }
       },
-      { "name": "CustomFooter" },
+      { "name": "Footer" },
       { "name": "About" },
       {
         "name": "Cookie",
@@ -979,6 +979,18 @@
         "name": "Dashboard"
       },
       "Notifications",
+      {
+        "name": "MapEditor",
+        "cfg": {
+          "titleMsgId": "widgets.mapWidget.mapEditorTitle",
+          "overrideDefaultPlugins": [
+            {
+              "name": "FeatureEditor",
+              "cfg": { "containerPosition": "bottom" }
+            }
+          ]
+        }
+      },
       {
         "name": "About",
         "cfg": {
@@ -1254,7 +1266,6 @@
       "Home",
       "UserManager",
       "GroupManager",
-      "CustomFooter",
       "TagsManager",
       "IPManager",
       "Footer",

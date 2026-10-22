@@ -13,6 +13,26 @@
     .dashboard-editor {
         .border-color-var(@theme-vars[main-border-color]);
     }
+    .view-switcher-container {
+        .border-color-var(@theme-vars[main-border-color]);
+    }
+    .ms-layout-view {
+        &.is-selected {
+            > button {
+                .background-color-var(@theme-vars[selected-bg]);
+            }
+        }
+        &:hover:not(.is-selected) {
+            > button {
+                .background-color-var(@theme-vars[selected-hover-bg]);
+            }
+        }
+    }
+    .configure-view-dialog-container {
+        .glyphicon-info-sign {
+            .color-var(@theme-vars[danger]);
+        }
+    }
 }
 
 // **************
@@ -58,62 +78,45 @@
     }
 }
 
-.page-dashboard {
-    .MapSearchBar {
-        input {
-            box-shadow: none;
-        }
-    }
+.dashboard-color-picker {
+    width: 100px;
+}
 
-    #mapstore-navbar-container {
+.view-switcher-container {
+
+    width: 100%;
+    border-top: 1px solid transparent;
+    min-height: 40px;
+    
+    .ms-layout-view {
         display: flex;
-        flex-direction: row-reverse;
-
-        .nav {
-            &.pull-left {
-                display: flex;
-                flex: 1;
-
-                >li {
-                    >a {
-                        display: flex;
-                        align-items: center;
-                        height: 100%;
-                    }
-                }
-            }
-        }
+        min-width: fit-content;
+    }
+    .ms-layout-view,
+    .ms-layout-view > button {
+        height: 100%;
+        position: relative;
+        border-top: none;
+        border-bottom: none;
     }
 
-    .ms-home-description {
-        padding: @square-btn-size 0 0 0;
-        background-position: center;
-
-        .container {
-            width: 100%;
-        }
+    .ms-layout-view .dropdown-toggle {
+        padding: 0.25rem;
     }
 
-    .navbar-home {
-        position: fixed;
-        width: 100%;
-        margin-bottom: 0;
-        z-index: 1000;
+    .ms-layout-view:first-child > .dropdown-toggle,
+    .ms-layout-view + .ms-layout-view > button {
+        border-left: none;
     }
 
-    >.container {
-        +.container {
-            border-top-width: 1px;
-            border-top-style: solid;
-        }
+    .view-switcher-tabs::-webkit-scrollbar {
+        display: none;
+    }
+}
 
-        &:last-child {
-            padding-top: 30px;
-            padding-bottom: 0;
-
-            >.row+.row {
-                margin-top: 15px;
-            }
-        }
+.fade.in.modal.configure-view-dialog-container {
+    z-index: 150;
+    .modal-dialog.modal-dialog-container {
+        margin-top: 100px;
     }
 }

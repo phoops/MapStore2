@@ -13,17 +13,18 @@ import get from 'lodash/get';
 import GeoTIFF from 'ol/source/GeoTIFF.js';
 import TileLayer from 'ol/layer/WebGLTile.js';
 import { isProjectionAvailable } from '../../../../utils/ProjectionUtils';
-import { getCredentials } from '../../../../utils/SecurityUtils';
+import { getRequestConfigurationByUrl } from '../../../../utils/SecurityUtils';
 
 function create(options) {
-    let sourceOptions;
-    if (options.security) {
-        const storedProtectedService = getCredentials(options.security?.sourceId) || {};
-        sourceOptions.headers = {
-            "Authorization": `Basic ${btoa(storedProtectedService.username + ":" + storedProtectedService.password)}`
-        };
+    let sourceOptions = {};
+    if (options.security && options.sources && options.sources.length > 0) {
+        const firstSource = options.sources[0];
+        const requestConfig = getRequestConfigurationByUrl(firstSource.url, null, options.security?.sourceId);
+        if (requestConfig.headers) {
+            sourceOptions.headers = requestConfig.headers;
+        }
     }
-    return new TileLayer({
+    const layerOl = new TileLayer({
         msId: options.id,
         style: get(options, 'style.body'),
         opacity: options.opacity !== undefined ? options.opacity : 1,
@@ -34,10 +35,13 @@ function create(options) {
             wrapX: true,
             sourceOptions
         }),
+        enablePickFeatures: true,
         zIndex: options.zIndex,
         minResolution: options.minResolution,
         maxResolution: options.maxResolution
     });
+
+    return layerOl;
 }
 
 Layers.registerType('cog', {
@@ -47,6 +51,7 @@ Layers.registerType('cog', {
             || !isEqual(newOptions.style, oldOptions.style)
             || !isEqual(newOptions.security, oldOptions.security)
             || !isEqual(newOptions.sources, oldOptions.sources) // min/max source data value can change
+            || !isEqual(oldOptions.requestRuleRefreshHash, newOptions.requestRuleRefreshHash)
         ) {
             return create(newOptions, map);
         }
