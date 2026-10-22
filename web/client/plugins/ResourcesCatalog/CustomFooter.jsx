@@ -11,17 +11,16 @@ import PropTypes from 'prop-types';
 import { createPlugin } from "../../utils/PluginsUtils";
 import Button from '../../components/layout/Button';
 import Spinner from '../../components/layout/Spinner';
-import Icon from './components/Icon';
 import HTML from '../../components/I18N/HTML';
 import Message from '../../components/I18N/Message';
 import usePluginItems from '../../hooks/usePluginItems';
 import { withResizeDetector } from 'react-resize-detector';
-import { Col, Grid, Row } from 'react-bootstrap';
+import { Col, Glyphicon, Grid, Row } from 'react-bootstrap';
+
 function FooterMenuItem({
     className,
     loading,
     glyph,
-    iconType,
     labelId,
     onClick,
     label
@@ -32,14 +31,13 @@ function FooterMenuItem({
                 onClick={onClick}
                 className={className}
             >
-                {loading ? <Spinner /> : <Icon glyph={glyph} type={iconType} />}
+                {loading ? <Spinner /> : <Glyphicon glyph={glyph} />}
                 {' '}
                 {labelId ? <Message msgId={labelId} /> : label}
             </Button>
         </li>
     );
 }
-
 FooterMenuItem.propTypes = {
     className: PropTypes.string,
     loading: PropTypes.bool,
