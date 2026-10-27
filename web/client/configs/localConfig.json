@@ -1,4 +1,5 @@
 {
+  "tokenRefreshInterval": 240000,
   "proxyUrl": {
     "url": "proxy/?url=",
     "useCORS": [
