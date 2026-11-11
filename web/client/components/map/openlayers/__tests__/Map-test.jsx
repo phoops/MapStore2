@@ -13,8 +13,6 @@ import OpenlayersLayer from '../Layer';
 import OpenlayersMap from '../Map';
 import { DEFAULT_INTERACTION_OPTIONS } from '../../../../utils/openlayers/DrawUtils';
 
-import assign from 'object-assign';
-
 import proj from 'proj4';
 import MapUtils from '../../../../utils/MapUtils';
 
@@ -663,10 +661,10 @@ describe('OpenlayersMap', () => {
             />
             , document.getElementById("map"));
 
-        let origProps = assign({}, map.props);
+        let origProps = Object.assign({}, map.props);
         function testProps(newProps) {
             // update original props with newProps
-            return assign({}, origProps, newProps);
+            return Object.assign({}, origProps, newProps);
         }
 
         map = ReactDOM.render(
@@ -740,10 +738,10 @@ describe('OpenlayersMap', () => {
             />
             , document.getElementById("map"));
 
-        let origProps = assign({}, map.props);
+        let origProps = Object.assign({}, map.props);
         function testProps(newProps) {
             // update original props with newProps
-            return assign({}, origProps, newProps);
+            return Object.assign({}, origProps, newProps);
         }
 
         map = ReactDOM.render(
@@ -1091,7 +1089,8 @@ describe('OpenlayersMap', () => {
     it('test getResolutions default', () => {
         const maxResolution = 2 * 20037508.34;
         const tileSize = 256;
-        const expectedResolutions = Array.from(Array(31).keys()).map( k=> maxResolution / tileSize / Math.pow(2, k));
+        // cap resolutions to avoid scales below 1:1, preventing inverted scales
+        const expectedResolutions = Array.from(Array(30).keys()).map( k=> maxResolution / tileSize / Math.pow(2, k));
         let map = ReactDOM.render(<OpenlayersMap id="ol-map" center={{ y: 43.9, x: 10.3 }} zoom={11} mapOptions={{ attribution: { container: 'body' } }} />, document.getElementById("map"));
         expect(map.getResolutions().length).toBe(expectedResolutions.length);
         // NOTE: round
@@ -1120,7 +1119,8 @@ describe('OpenlayersMap', () => {
         proj.defs(projectionDefs[0].code, projectionDefs[0].def);
         const maxResolution = 1847542.2626266503 - 1241482.0019432348;
         const tileSize = 256;
-        const expectedResolutions = Array.from(Array(31).keys()).map(k => maxResolution / tileSize / Math.pow(2, k));
+        // cap resolutions to avoid scales below 1:1, preventing inverted scales
+        const expectedResolutions = Array.from(Array(24).keys()).map(k => maxResolution / tileSize / Math.pow(2, k));
         let map = ReactDOM.render(<OpenlayersMap
             id="ol-map"
             center={{
@@ -1414,7 +1414,8 @@ describe('OpenlayersMap', () => {
         expect(map).toBeTruthy();
         expect(map.map.getView().getResolutions().length).toBe(resolutions.length);
         expect(map.map.getLayers().getLength()).toBe(1);
-        expect(map.map.getLayers().getArray()[0].getSource().getTileGrid().getResolutions().length).toBe(31);
+        // cap resolutions to avoid scales below 1:1, tile grid inherits the map view's capped resolutions
+        expect(map.map.getLayers().getArray()[0].getSource().getTileGrid().getResolutions().length).toBe(30);
     });
     it('should use tile grid resolutions based on custom strategy and not the map resolutions', () => {
         const options = {
@@ -1488,5 +1489,41 @@ describe('OpenlayersMap', () => {
             expect(ReactDOM.findDOMNode(map).id).toBe('mymap');
             expect(customHooRegister.getHook(MapUtils.ZOOM_TO_EXTENT_HOOK)).toBeTruthy();
         });
+    });
+    it('update map position center based on nearly equal match when receiving new props', () => {
+        let map = ReactDOM.render(
+            <OpenlayersMap
+                center={{y: 43.9323233378, x: 10.3346776780}}
+                zoom={1}
+                projection="EPSG:4326"
+                measurement={{}}
+            />
+            , document.getElementById("map"));
+        map = ReactDOM.render(
+            <OpenlayersMap
+                center={{y: 43.9323233388, x: 10.3346776790}}
+                zoom={1}
+                measurement={{}}
+                projection="EPSG:4326"
+                mapOptions={undefined}
+            />
+            , document.getElementById("map")
+        );
+        expect(map).toBeTruthy();
+        // center is not modified
+        expect(map.map.getView().getCenter()).toEqual([10.3346776780, 43.9323233378]);
+
+        map = ReactDOM.render(
+            <OpenlayersMap
+                center={{y: 43.9323234388, x: 10.3346773790}}
+                zoom={1}
+                measurement={{}}
+                projection="EPSG:4326"
+                mapOptions={undefined}
+            />
+            , document.getElementById("map")
+        );
+        // center is modified
+        expect(map.map.getView().getCenter()).toEqual([10.3346773790, 43.9323234388]);
     });
 });

@@ -35,7 +35,29 @@ describe("geostory media map component enhancers", () => {
         const Sink = withMapEnhancer(createSink( props => {
             expect(props).toBeTruthy();
             expect(props.map).toBeTruthy();
-            expect(props.map).toEqual({id: "2", layers: []});
+            expect(props.map).toEqual({id: "2", layers: [], groups: []});
+            done();
+        }));
+        ReactDOM.render(<Provider store={store}><Sink resourceId={resourceId} map={{}}/></Provider>, document.getElementById("container"));
+    });
+    it('withMapEnhancer generate correct props for legacy geostory', (done) => {
+        const resources = [{id: "1", type: "map", data: {id: "2", layers: [ {
+            "visibility": true
+        }, null], groups: [null, null, {
+            "expanded": false
+        }], context: "1"}}];
+        const store = {
+            subscribe: () => {}, getState: () => ({geostory: {currentStory: {resources}}})
+        };
+        const resourceId = "1";
+        const Sink = withMapEnhancer(createSink( props => {
+            expect(props).toBeTruthy();
+            expect(props.map).toBeTruthy();
+            expect(props.map).toEqual({id: "2", layers: [ {
+                "visibility": true
+            }, undefined], groups: [undefined, undefined, {
+                "expanded": false
+            }]});
             done();
         }));
         ReactDOM.render(<Provider store={store}><Sink resourceId={resourceId} map={{}}/></Provider>, document.getElementById("container"));
@@ -129,10 +151,13 @@ describe("geostory media map component enhancers", () => {
         for (let btn of buttons) {
             ReactTestUtils.Simulate.click(btn);
         }
-        const confirmButtons = document.querySelectorAll(".with-confirm-modal button");
-        expect(confirmButtons).toExist();
-        expect(confirmButtons.length).toBe(3);
-        ReactTestUtils.Simulate.click(confirmButtons[1]);
+        const dialog = document.querySelector('[role="dialog"]');
+        expect(dialog).toExist();
+
+        const dialogButtons = dialog.querySelectorAll('.btn');
+        expect(dialogButtons.length).toBe(2); // New dialog has 2 buttons
+
+        ReactTestUtils.Simulate.click(dialogButtons[1]);
         expect(SpyOnReset).toHaveBeenCalled();
         expect(SpyToggleAdvancedEditing).toHaveBeenCalled();
         done();

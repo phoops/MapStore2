@@ -137,8 +137,9 @@ function extractCapabilities(tileset) {
  * @param {string} url URL of the 3d tiles tileset.json file
  * @
  */
-export const getCapabilities = (url) => {
-    return axios.get(url)
+export const getCapabilities = (url, info) => {
+    const protectedId = info?.options?.service?.protectedId;
+    return axios.get(url, {_msAuthSourceId: protectedId})
         .then(({ data }) => {
             return extractCapabilities(data).then((properties) => ({ tileset: data, ...properties }));
         }).catch((e) => {

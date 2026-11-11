@@ -13,7 +13,6 @@
 
 export const ADD_BACKGROUND = 'BACKGROUND_SELECTOR:ADD_BACKGROUND';
 export const REMOVE_BACKGROUND = 'BACKGROUND_SELECTOR:REMOVE_BACKGROUND';
-export const SET_CURRENT_BACKGROUND_LAYER = 'BACKGROUND_SELECTOR:SET_CURRENT_BACKGROUND_LAYER';
 export const BACKGROUND_ADDED = 'BACKGROUND_SELECTOR:BACKGROUND_ADDED';
 export const BACKGROUND_EDITED = 'BACKGROUND_SELECTOR:BACKGROUND_EDITED';
 export const ADD_BACKGROUND_PROPERTIES = 'BACKGROUND_SELECTOR:ADD_BACKGROUND_PROPERTIES';
@@ -25,6 +24,7 @@ export const CLEAR_MODAL_PARAMETERS = 'BACKGROUND_SELECTOR:CLEAR_MODAL_PARAMETER
 export const CONFIRM_DELETE_BACKGROUND_MODAL = 'BACKGROUND_SELECTOR:CONFIRM_DELETE_BACKGROUND_MODAL';
 export const ALLOW_BACKGROUNDS_DELETION = 'BACKGROUND_SELECTOR:ALLOW_BACKGROUNDS_DELETION';
 export const SYNC_CURRENT_BACKGROUND_LAYER = 'BACKGROUND_SELECTOR:SYNC_CURRENT_BACKGROUND_LAYER';
+export const STASH_SELECTED_SERVICE = 'BACKGROUND_SELECTOR:STASH_SELECTED_SERVICE';
 
 export function createBackgroundsList(backgrounds) {
     return {
@@ -64,13 +64,6 @@ export function backgroundAdded(layerId) {
 export function backgroundEdited(layerId) {
     return {
         type: BACKGROUND_EDITED,
-        layerId
-    };
-}
-
-export function setCurrentBackgroundLayer(layerId) {
-    return {
-        type: SET_CURRENT_BACKGROUND_LAYER,
         layerId
     };
 }
@@ -123,5 +116,22 @@ export function confirmDeleteBackgroundModal(show, layerTitle = null, layerId = 
         show,
         layerTitle,
         layerId
+    };
+}
+
+/**
+ * Stashes the currently selected catalog service for later restoration.
+ * This is useful when closing the catalog and reopening it for background selection,
+ * allowing the user to easily return to their previous selection.
+ *
+ * @param {Object} service - The service object representing the currently selected catalog.
+ * @returns {Object} An action object with the type `STASH_SELECTED_SERVICE`
+ *                  and the selected service.
+ */
+
+export function stashSelectedCatalogService(service) {
+    return {
+        type: STASH_SELECTED_SERVICE,
+        service
     };
 }

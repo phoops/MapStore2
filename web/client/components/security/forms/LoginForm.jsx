@@ -8,8 +8,9 @@
 
 import React from 'react';
 import { FormControl, FormGroup, ControlLabel, Alert } from 'react-bootstrap';
-import Spinner from 'react-spinkit';
+import Spinner from "../../layout/Spinner";
 import PropTypes from 'prop-types';
+
 
 import Message from '../../I18N/Message';
 import { getMessageById } from '../../../utils/LocaleUtils';
@@ -22,8 +23,8 @@ class LoginForm extends React.Component {
     static propTypes = {
         // props
         user: PropTypes.object,
-        onLoginSuccess: PropTypes.func,
         showSubmitButton: PropTypes.bool,
+        loading: PropTypes.bool,
         loginError: PropTypes.object,
 
         // actions
@@ -44,6 +45,7 @@ class LoginForm extends React.Component {
     static defaultProps = {
         onSubmit: () => {},
         onLoginError: () => {},
+        loading: false,
         showSubmitButton: true,
         userNameText: <Message msgId="user.username"/>,
         passwordText: <Message msgId="user.password"/>,
@@ -56,22 +58,9 @@ class LoginForm extends React.Component {
     };
 
     state = {
-        loading: false,
         username: '',
         password: ''
     };
-
-    UNSAFE_componentWillReceiveProps(nextProps) {
-        let newUser = nextProps.user;
-        let oldUser = this.props.user;
-        let userChange = newUser !== oldUser;
-        if ( newUser && userChange ) {
-            this.props.onLoginSuccess(nextProps.user);
-        }
-        this.setState({
-            loading: false
-        } );
-    }
 
     renderError = () => {
         let error = this.props.loginError;
@@ -90,7 +79,7 @@ class LoginForm extends React.Component {
     };
 
     renderLoading = () => {
-        return this.state.loading ? <Spinner spinnerName="circle" key="loadingSpinner" noFadeIn overrideSpinnerClassName="spinner"/> : null;
+        return this.props.loading ? <Spinner /> : null;
     };
 
     renderSubmit = () => {
@@ -165,7 +154,6 @@ class LoginForm extends React.Component {
             this.props.onError({status: 0});
         }
         this.props.onSubmit(username, password);
-        this.setState({loading: true});
     };
 }
 

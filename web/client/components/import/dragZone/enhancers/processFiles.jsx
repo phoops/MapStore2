@@ -24,7 +24,9 @@ import {
     readWMC,
     readZip,
     recognizeExt,
-    shpToGeoJSON
+    shpToGeoJSON,
+    readGeoJson,
+    isFileSizeExceedMaxLimit
 } from '../../../../utils/FileUtils';
 import { geoJSONToLayer } from '../../../../utils/LayersUtils';
 
@@ -48,7 +50,8 @@ const checkFileType = (file) => {
             || type === 'application/vnd.google-earth.kmz'
             || type === 'application/gpx+xml'
             || type === 'application/json'
-            || type === 'application/vnd.wmc') {
+            || type === 'application/vnd.wmc'
+            || type === 'application/geo+json') {
             resolve(file);
         } else {
             // Drag and drop of compressed folders doesn't correctly send the zip mime type (windows, also conflicts with installations of WinRar)
@@ -61,9 +64,19 @@ const checkFileType = (file) => {
  * Create a function that return a Promise for reading file. The Promise resolves with an array of (json)
  * @param {function} onWarnings callback in case of warnings to report
  */
-const readFile = (onWarnings) => (file) => {
+const readFile = ({onWarnings, options}) => (file) => {
     const ext = recognizeExt(file.name);
     const type = file.type || MIME_LOOKUPS[ext];
+    // Check the file size first before file conversion process to avoid this useless effort
+    const configurableFileSizeLimitInMB = options.importedVectorFileMaxSizeInMB;
+    const isVectorFile = type !== 'application/json';       // skip json as json is for map file
+    if (configurableFileSizeLimitInMB && isVectorFile) {
+        if (isFileSizeExceedMaxLimit(file, configurableFileSizeLimitInMB)) {
+            // add 'exceedFileMaxSize' and fileSizeLimitInMB into layer object to be used in useFiles
+            return [[{ "type": "FeatureCollection", features: [{}], "fileName": file.name, name: file.name, exceedFileMaxSize: true, fileSizeLimitInMB: configurableFileSizeLimitInMB }]];
+        }
+    }
+
     const projectionDefs = ConfigUtils.getConfigProp('projectionDefs') || [];
     const supportedProjections = (projectionDefs.length && projectionDefs.map(({code})  => code) || []).concat(["EPSG:4326", "EPSG:3857", "EPSG:900913"]);
     if (type === 'application/vnd.google-earth.kml+xml') {
@@ -114,6 +127,18 @@ const readFile = (onWarnings) => (file) => {
             return [{...f, "fileName": file.name}];
         });
     }
+    if (type === 'application/geo+json') {
+        return readGeoJson(file).then(f => {
+            const projection = get(f, 'geoJSON.map.projection');
+            if (projection) {
+                if (supportedProjections.includes(projection)) {
+                    return [{...f.geoJSON, "fileName": file.name}];
+                }
+                throw new Error("PROJECTION_NOT_SUPPORTED");
+            }
+            return [{...f.geoJSON, "fileName": file.name}];
+        });
+    }
     if (type === 'application/vnd.wmc') {
         return readWMC(file).then((config) => {
             return [{...config, "fileName": file.name}];
@@ -137,18 +162,26 @@ export default compose(
             const { handler: onWarnings, stream: warnings$} = createEventHandler();
             return props$.combineLatest(
                 drop$.switchMap(
-                    files => Rx.Observable.from(files)
+                    ({files, options}) => Rx.Observable.from(files)
                         .flatMap(checkFileType) // check file types are allowed
-                        .flatMap(readFile(onWarnings)) // read files to convert to json
+                        .flatMap(readFile({onWarnings, options})) // read files to convert to json
                         .reduce((result, jsonObjects) => ({ // divide files by type
                             layers: (result.layers || [])
                                 .concat(
                                     jsonObjects.filter(json => isGeoJSON(json))
-                                        .map(json => (isAnnotation(json) ?
-                                            // annotation GeoJSON to layers
-                                            { name: "Annotations", features: importJSONToAnnotations(json), filename: json.filename} :
+                                        .map(json => {
+                                            const isLayerExceedsMaxFileSize = json?.exceedFileMaxSize || false;
+                                            const isAnnotationLayer = isAnnotation(json);
+                                            if (isAnnotationLayer) {
+                                                // annotation GeoJSON to layers
+                                                return { name: "Annotations", features: importJSONToAnnotations(json), filename: json.filename};
+                                            } else if (isLayerExceedsMaxFileSize) {
+                                            // layers with size exceeds the max size limit
+                                                return { ...json, filename: json.filename};
+                                            }
                                             // other GeoJSON to layers
-                                            {...geoJSONToLayer(json), filename: json.filename}))
+                                            return {...geoJSONToLayer(json), filename: json.filename};
+                                        })
                                 ),
                             maps: (result.maps || [])
                                 .concat(
@@ -179,5 +212,6 @@ export default compose(
                 })
             );
         }
+
     )
 );

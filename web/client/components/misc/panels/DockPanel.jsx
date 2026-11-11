@@ -12,6 +12,7 @@ import Dock from 'react-dock';
 import BorderLayout from '../../layout/BorderLayout';
 import { withState } from 'recompose';
 import PanelHeader from './PanelHeader';
+import { DEFAULT_PANEL_WIDTH } from '../../../utils/LayoutUtils';
 
 /**
  * Component for rendering a DockPanel
@@ -26,13 +27,13 @@ import PanelHeader from './PanelHeader';
  * @prop {object} style style of dock panel
  * @prop {number} zIndex panel z index
  * @prop {function} onClose callback on click close icon
- * @prop {string} bsStyle default or primary
  * @prop {node} title title on header
  * @prop {bool} showFullscreen enable fullscreen
  * @prop {string} glyph glyph displayed on top corner of panel
  * @prop {node} header additional element for header
  * @prop {node} footer footer content
  * @prop {bool} hideHeader hide header
+ * @prop {bool} hideCloseButton hide close button
  */
 
 export default withState('fullscreen', 'onFullscreen', false)(
@@ -42,11 +43,10 @@ export default withState('fullscreen', 'onFullscreen', false)(
         fullscreen = false,
         position,
         open,
-        size = 550,
+        size = DEFAULT_PANEL_WIDTH,
         style = {},
         zIndex = 1030,
         onClose,
-        bsStyle,
         title,
         showFullscreen = false,
         glyph,
@@ -56,7 +56,8 @@ export default withState('fullscreen', 'onFullscreen', false)(
         onFullscreen = () => {},
         fixed = false,
         resizable = false,
-        hideHeader
+        hideHeader,
+        hideCloseButton = false
     }) =>
         <div className={'ms-side-panel ' + (!fixed ? 'ms-absolute-dock ' : '') +  (!resizable ? 'react-dock-no-resize ' : '') + className}>
             <Dock
@@ -72,13 +73,13 @@ export default withState('fullscreen', 'onFullscreen', false)(
                         !hideHeader && open && <PanelHeader
                             position={position}
                             onClose={onClose}
-                            bsStyle={bsStyle}
                             title={title}
                             fullscreen={fullscreen}
                             showFullscreen={showFullscreen}
                             glyph={glyph}
                             additionalRows={header}
-                            onFullscreen={onFullscreen}/>
+                            onFullscreen={onFullscreen}
+                            hideCloseButton={hideCloseButton}/>
                     }
                     footer={open && footer}>
                     {open && children}

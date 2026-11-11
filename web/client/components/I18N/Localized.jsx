@@ -15,19 +15,33 @@ class Localized extends React.Component {
     static propTypes = {
         locale: PropTypes.string,
         messages: PropTypes.object,
-        loadingError: PropTypes.string
+        loadingError: PropTypes.string,
+        localeKey: PropTypes.bool
     };
 
     static childContextTypes = {
         locale: PropTypes.string,
-        messages: PropTypes.object
+        messages: PropTypes.object,
+        localeKey: PropTypes.bool
     };
-
+    static defaultProps = {
+        localeKey: true
+    };
     getChildContext() {
         return {
             locale: this.props.locale,
             messages: this.props.messages
         };
+    }
+
+    componentDidMount() {
+        this.updateDocumentLangAttribute();
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.props.locale !== prevProps.locale) {
+            this.updateDocumentLangAttribute();
+        }
     }
 
     render() {
@@ -38,7 +52,7 @@ class Localized extends React.Component {
                 children = children();
             }
 
-            return (<IntlProvider key={this.props.locale} locale={this.props.locale}
+            return (<IntlProvider {...this.props.localeKey && { key: this.props.locale }} locale={this.props.locale}
                 messages={this.flattenMessages(this.props.messages)}
             >
                 {children}
@@ -61,6 +75,12 @@ class Localized extends React.Component {
             };
         }, {});
     };
+
+    updateDocumentLangAttribute() {
+        if (document?.documentElement) {
+            document.documentElement.setAttribute("lang", this.props.locale);
+        }
+    }
 }
 
 export default Localized;

@@ -52,13 +52,17 @@ The general settings are three mandatory fields that each Remote Service needs t
 
 <img src="../img/catalog/general_settings.jpg" class="ms-docimage"  style="max-width:600px;"/>
 
-In particular:
+In particular, the user can set:
 
-* **Url**: the URL of the remote source service
+* The **Url** of the remote source service
 
-* **Type**: the type of the remote source service (between *WMS*, *WFS*, *CSW*, *TMS*, *WMTS* and *3D Tiles*)
+* The **Type** of the remote source service chooseing between *WMS*, *WFS*, *CSW*, *TMS*, *WMTS*, *3D Tiles*, *IFC Model* and *ArcGIS*
 
-* **Title**: the title to assign to the catalog. This text will be used in the service selection dropdown menu for this service.
+* The **Title** to assign to the catalog. This text will be used in the service selection dropdown menu for this service.
+
+MapStore also provides the possibility specify credentials for sources requesting them for authorizing requested layer tiles. Once the <img src="../img/button/basic-auth-button.jpg" class="ms-docbutton"/> button is clicked, the service credentials can be entered in a popup. This is for supporting Basic Auth and ensures that the *Basic Authentication* header is automatically included in the OGC requests for layers belonging to that catalog source.
+
+<video class="ms-docimage" controls><source src="../img/catalog/basic-authentication.mp4"/></video>
 
 ### Advanced settings
 
@@ -94,6 +98,8 @@ In **general settings of**  CSW service the user can specify the title to assign
 
 !!! note
     If the **No Vendor** is set, then [MapStore](https://mapstore.geosolutionsgroup.com/mapstore/#/) will not use any vendor option supported only by GeoServer in the OGC requests where this source is involved.
+
+* *Interactive legend*: if checked, allows to set by default the legend filter when a layer is added to the map from this source as described in [Layer Settings](layer-settings.md#display).
 
 * *Format*: to assign the default *Tile* format for the layers added to the map (e.g. `png`, `png8`, `jpeg`, `vnd.jpeg-png`, `vnd.jpeg-png8` or `gif`) and to define the default *Information sheet* format for the layers added to the map (`text/plain`, `text/html`, `application/json` or `application/geo+json`). The list of available formats is automatically retrieved from the ones supported by the WMS server and can be also manually fetched through the **Fetch supported formats** <img src = "../img/button/update_button.jpg" Button = "ms-docbutton" /> button when necessary.
 
@@ -232,6 +238,8 @@ Enabling that option, all layers added to the map from this catalog source will 
 
 !!! note
     If the **No Vendor** is set, then [MapStore](https://mapstore.geosolutionsgroup.com/mapstore/#/) will not use any vendor option supported only by GeoServer in the OGC requests where this source is involved.
+
+* *Interactive legend*: if checked, allows to set by default the legend filter when a layer is added to the map from this source as described in [Layer Settings](layer-settings.md#display).
 
 * *Use remote custom tile grids*: if checked, allows to set by default the *custom tile grid caching strategy* when a layer is added to the map from this source as described in [Layer Settings](layer-settings.md#display).
 
@@ -429,3 +437,33 @@ In **General Settings** of a IFC source type, it is possible to specify the serv
     * *Zoom to selected layer extent* <img src="../img/button/zoom-layer.jpg" class="ms-docbutton"/>: in order to zoom the map to the layer's extent
     * Access the [Layer Settings](layer-settings.md#layer-settings) <img src="../img/button/properties.jpg" class="ms-docbutton"/> to view/edit the [General Information](layer-settings.md#general-information) and the [Display](layer-settings.md#ifc-layer) options
     * *Remove* the layer <img src="../img/button/delete.jpg" class="ms-docbutton"/>
+
+### ArcGIS Catalog
+
+An [**ArcGIS Server Services Directory**](https://developers.arcgis.com/rest/services-reference/enterprise/get-started-with-the-services-directory/) is a RESTful representation of all the services running on an ArcGIS Server site. MapStore allows adding ArcGIS [Map Service](https://developers.arcgis.com/rest/services-reference/enterprise/map-service/) and [Image Service](https://developers.arcgis.com/rest/services-reference/enterprise/image-service/) types through its *Catalog* tool where a specific source type can be configured.
+
+In **General Settings** of a ArcGIS source type, it is possible to specify the service `Title` and its `URL`.
+
+<img src="../img/catalog/ArcGIS_service.jpg" class="ms-docimage"  style="max-width:600px;"/>
+
+!!! warning
+    The `URL` could have one of the following structures:
+
+    * `https://<catalog-url>/rest/services/`
+
+    * `https://<catalog-url>/rest/services/<serviceName>/MapServer`
+    
+    * `https://<catalog-url>/rest/services/<serviceName>/ImageServer`
+
+!!! Note
+    The tool capabilities currently available for layers come from ArcGIS service are:
+
+    * *Zoom to selected layer extent* <img src="../img/button/zoom-layer.jpg" class="ms-docbutton"/>: in order to zoom the map to the layer's extent
+    * Access the [Layer Settings](layer-settings.md#layer-settings) <img src="../img/button/properties.jpg" class="ms-docbutton"/> to view/edit the [General Information](layer-settings.md#general-information) and the [Display](layer-settings.md#ifc-layer) options
+    * *Remove* the layer <img src="../img/button/delete.jpg" class="ms-docbutton"/>
+
+### FlatGeobuf Catalog
+
+A [FlatGeobuf (FGB)](https://flatgeobuf.org/) is a vector file format designed to be served through a standard HTTP server. Its internal structure enables fast and selective data access by leveraging HTTP Range Requests: clients can request only the portions of the file they need, without having to download the entire dataset.
+
+In MapStore, FGB files can be added as layers. Through the Catalog tool, it is possible to configure multiple FlatGeobuf URL sources: each URL is interpreted as a single layer and added to the map directly and efficiently.

@@ -54,7 +54,8 @@ export const getRecords = (url, startPosition, maxRecords, text, info) => {
             resolve(searchAndPaginate(cached.data, startPosition, maxRecords, text, info));
         });
     }
-    return axios.get(url).then((response) => {
+    const protectedId = info?.options?.service?.protectedId;
+    return axios.get(url, {_msAuthSourceId: protectedId}).then((response) => {
         let json;
         xml2js.parseString(response.data, { explicitArray: false }, (ignore, result) => {
             json = { ...result, url };

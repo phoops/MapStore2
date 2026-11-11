@@ -104,6 +104,20 @@ When the *Use cache options* is enabled, more controls are enabled so that it is
 !!!warning
     The Gridset compatibility check made by MapStore whose result is shown by the Info tooltip, is usually quite reliable but should be considered anyway only to provide general matching indicators aimed at highlighting possible compatibility issues between the current layer/map settings and the remote Tile Grid. Due to the cache tolerance considered on the server side by GWC, it might even happen in some cases that the settings available on the client side don't HIT the tile cache even if all the checks listed are successful. At the same time, when the standard gridset is used, gridsets check may fail even if all WMS request are effectively HITTING the cache (e.g. because the WMTS reports a list of origins).
 
+* Enable/disable the **Interactive legend**. If this option is enabled, legend entries with an associated valid filter are displayed as toggleable items inside the TOC, a user can click on these legend items to filter the content of the layer. An example can be the following one:
+
+<video class="ms-docimage"  style="max-width:700px;" controls><source src="../img/layer-settings/interactive-legend.mp4"></video>
+
+!!! Note
+    Any type of [Filter](filtering-layers.md#filter-types) applied to the layer remains active when the legend filter is activated on the same layer.
+
+* Enable/disable the **Dynamic legend**. If this option is enable, legend will be filtered based on the map viewport and layer [Filter](filtering-layers.md#filter-types). An example can be the following one:
+
+<video class="ms-docimage"  style="max-width:700px;" controls><source src="../img/layer-settings/dynamic-legend.mp4"></video>
+
+!!! Note
+    The *Dynamic Legend* option is available for both `WMS` and `ArcGIS` layers.
+
 * Set the layer *Legend* with custom *Width* and *Height* options. Both of these field values if greater than the default legend's size of 12, then the custom values gets applied on the legend width and height display property
 
 * A preview of the legend is shown with the applied custom values from Legend fields above.
@@ -120,6 +134,10 @@ On the *Display* tab, only the following options are available for a **3D Tile**
 <img src="../img/layer-settings/display-3d-tiles.jpg" class="ms-docimage"  style="max-width:450px;"/>
 
 * The **Visibility limits** to display the layer only within certain scale limits, as reported above.
+
+* The **Imagery Layers Overlay** to drape imagery layers, such as `WMS`, `TMS`, or `WMTS`, on top of `3D Tiles` and rendering them sequentially in the order defined in the TOC. An example can be the following one:
+
+<img src="../img/layer-settings/imagery-layers.jpg" class="ms-docimage"style="max-width:600px;"/>
 
 * The **Height Offset** above the ground.
 
@@ -526,6 +544,10 @@ In particular, the user can choose between:
 
 !!!note
     Without selecting any format here, the [Identify Tool](navigation-toolbar.md#identify-tool) will return the layers information with the format chosen in Map Settings ( in the [Side Toolbar](mapstore-toolbars.md#side-toolbar)). Once a user specifies the information format in layers settings, instead, that format will take precedence over the map settings only for that specific layer.
+
+!!!note
+    From the Layer Settings panel, MapStore allows users to choose the *Information format* for `WMS` and `WFS` layer types.
+    The **Text** option is only available for `WMS` layers, while the **HTML** option for `WFS` layers is available only with GeoServer and if the [`wfs-freemarker`](https://docs.geoserver.org/main/en/user/community/wfs-freemarker/index.html) extension is installed on the GeoServer side.
 
 ### Text
 

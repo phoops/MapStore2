@@ -18,36 +18,36 @@ import InfoPopover from '../../../widgets/widget/InfoPopover';
  * - autoload: Option allows the automatic fetching of the results upon selecting the service from Service dropdown
  * - hideThumbnail: Options allows to hide the thumbnail on the result
  *
+ * @prop {boolean} globalHideThumbnail - Global default cfg for thumbnail visibility.
+ * @prop {object} service the service to edit
+ * @prop {function} onChangeServiceProperty handler (key, value) to change a property of service.
+ * @prop {function} onToggleThumbnail - Thumbnail toggle handler.
  */
 export default ({
     children,
+    globalHideThumbnail,
     service,
     onChangeServiceProperty = () => { },
     onToggleThumbnail = () => { }
-}) => (
-    <>
-        <FormGroup controlId="autoload" key="autoload">
-            {service.autoload !== undefined && <Checkbox value="autoload" onChange={(e) => onChangeServiceProperty("autoload", e.target.checked)}
-                checked={!isNil(service.autoload) ? service.autoload : false}>
-                <Message msgId="catalog.autoload" />
-            </Checkbox>}
-        </FormGroup>
-        <FormGroup controlId="thumbnail" key="thumbnail">
-            <Checkbox
-                onChange={() => onToggleThumbnail()}
-                checked={!isNil(service.hideThumbnail) ? !service.hideThumbnail : true}>
-                <Message msgId="catalog.showPreview" />
-            </Checkbox>
-        </FormGroup>
-        {!isNil(service.type) && service.type === "wfs" &&
-            <FormGroup controlId="allowUnsecureLayers" key="allowUnsecureLayers">
+}) => {
+    const showThumbnailValue = !isNil(service.hideThumbnail) ? !service.hideThumbnail : !isNil(globalHideThumbnail) ? !globalHideThumbnail : true;
+    return (
+        <>
+            <FormGroup controlId="autoload" key="autoload">
+                {service.autoload !== undefined && <Checkbox value="autoload" onChange={(e) => onChangeServiceProperty("autoload", e.target.checked)}
+                    checked={!isNil(service.autoload) ? service.autoload : false}>
+                    <Message msgId="catalog.autoload" />
+                </Checkbox>}
+            </FormGroup>
+            <FormGroup controlId="thumbnail" key="thumbnail">
                 <Checkbox
-                    onChange={(e) => onChangeServiceProperty("allowUnsecureLayers", e.target.checked)}
-                    checked={!isNil(service.allowUnsecureLayers) ? service.allowUnsecureLayers : false}>
-                    <Message msgId="catalog.allowUnsecureLayers.label" />&nbsp;<InfoPopover text={<Message msgId="catalog.allowUnsecureLayers.tooltip" />} />
+                    onChange={(evt) => onToggleThumbnail(!evt.target.checked)}
+                    checked={showThumbnailValue}>
+                    <Message msgId="catalog.showPreview" />
                 </Checkbox>
-            </FormGroup>}
-        {!isNil(service.type) && service.type === "cog" &&
+            </FormGroup>
+
+            {!isNil(service.type) && service.type === "cog" &&
             <FormGroup controlId="fetchMetadata" key="fetchMetadata">
                 <Checkbox
                     onChange={(e) => onChangeServiceProperty("fetchMetadata", e.target.checked)}
@@ -55,6 +55,15 @@ export default ({
                     <Message msgId="catalog.fetchMetadata.label" />&nbsp;<InfoPopover text={<Message msgId="catalog.fetchMetadata.tooltip" />} />
                 </Checkbox>
             </FormGroup>}
-        {children}
-    </>
-);
+            {['wfs', 'vector'].includes(service.type) && <FormGroup className="wfs-vector-interactive-legend" controlId="enableInteractiveLegend" key="enableInteractiveLegend">
+                <Checkbox data-qa="display-interactive-legend-option"
+                    onChange={(e) => onChangeServiceProperty("layerOptions", { ...service.layerOptions, enableInteractiveLegend: e.target.checked})}
+                    checked={!isNil(service.layerOptions?.enableInteractiveLegend) ? service.layerOptions?.enableInteractiveLegend : false}>
+                    <Message msgId="layerProperties.enableInteractiveLegendInfo.label" />
+                &nbsp;<InfoPopover text={<Message msgId="layerProperties.enableInteractiveLegendInfo.infoWithoutGSNote" />} />
+                </Checkbox>
+            </FormGroup>}
+            {children}
+        </>
+    );
+};

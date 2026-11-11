@@ -100,8 +100,8 @@ describe("test TOCItemsSettings", () => {
                 Component: () => <div id="test-display-body"></div>
             }
         ]} element={layers[0]}/>, document.getElementById("container"));
-        const baar = document.getElementsByClassName("container-fluid")[0].childNodes[0].childNodes[1].childNodes[0].textContent;
-        expect(baar).toBe(layers[0].title.default);
+        const bar = document.querySelector('.ms-header .ms-text');
+        expect(bar.innerText).toBe(layers[0].title.default);
 
     });
 
@@ -193,5 +193,24 @@ describe("test TOCItemsSettings", () => {
         expect(btnGroup).toNotExist();
         const customToolbar = document.querySelector('.custom-toolbar');
         expect(customToolbar).toExist();
+    });
+
+    it('test hideCloseButton configuration', () => {
+        ReactDOM.render(<TOCItemsSettings
+            settings={settings}
+            activeTab="general"
+            hideCloseButton
+            tabs={[
+                {
+                    id: 'general',
+                    titleId: 'layerProperties.general',
+                    tooltipId: 'layerProperties.general',
+                    glyph: 'wrench',
+                    Component: () => <div id="test-general-body"></div>
+                }
+            ]}
+        />, document.getElementById("container"));
+        const closeButton = document.querySelector('.ms-close');
+        expect(closeButton).toNotExist();
     });
 });

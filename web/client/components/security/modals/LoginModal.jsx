@@ -14,10 +14,11 @@ import Modal from '../../misc/Modal';
 import Message from '../../I18N/Message';
 import { getMessageById } from '../../../utils/LocaleUtils';
 import '../css/security.css';
-import Button from '../../misc/Button';
+import Button from '../../layout/Button';
 import google from './assets/google.svg';
-import keycloak from './assets/spid.svg';
+import keycloak from './assets/spid_cie.svg';
 import withTooltip from '../../misc/enhancers/tooltip';
+import FlexBox from '../../layout/FlexBox';
 
 
 const logos = {
@@ -42,6 +43,7 @@ class LoginModal extends React.Component {
         user: PropTypes.object,
         loginError: PropTypes.object,
         show: PropTypes.bool,
+        loading: PropTypes.bool,
         options: PropTypes.object,
 
         // CALLBACKS
@@ -78,12 +80,12 @@ class LoginModal extends React.Component {
         const formProviders = this.props.providers.filter(({type}) => type === "basic");
         if (formProviders.length > 0) {
             return (<LoginForm
+                loading={this.props.loading}
                 role="body"
                 ref="loginForm"
                 showSubmitButton={false}
                 user={this.props.user}
                 loginError={this.props.loginError}
-                onLoginSuccess={this.props.onLoginSuccess}
                 onSubmit={this.props.onSubmit}
                 onError={this.props.onError}
             />);
@@ -106,21 +108,21 @@ class LoginModal extends React.Component {
     }
 
     getFooter = () => {
-        return (<span role="footer">
-            <Button
-                ref="submit"
-                value={getMessageById(this.context.messages, "user.signIn")}
-                bsStyle="primary"
-                bsSize={this.props.buttonSize}
-                className="pull-left"
-                onClick={this.loginSubmit}
-                key="submit">{getMessageById(this.context.messages, "user.signIn")}</Button>
+        return ( <FlexBox centerChildrenVertically  gap="sm">
+            <FlexBox.Fill />
             {this.props.includeCloseButton ? <Button
                 key="closeButton"
                 ref="closeButton"
-                bsSize={this.props.buttonSize}
                 onClick={this.handleOnHide}><Message msgId="close"/></Button> : <span/>}
-        </span>);
+            <Button
+                ref="submit"
+                value={getMessageById(this.context.messages, "user.signIn")}
+                variant="success"
+                onClick={this.loginSubmit}
+                key="submit">
+                <Message msgId="user.signIn"/>
+            </Button>
+        </FlexBox>);
     };
 
     render() {

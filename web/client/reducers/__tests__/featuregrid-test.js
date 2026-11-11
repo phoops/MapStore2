@@ -47,7 +47,6 @@ import featuregrid from '../featuregrid';
 
 import {
     setFeatures,
-    dockSizeFeatures,
     setLayer,
     toggleTool,
     customizeAttribute,
@@ -76,7 +75,6 @@ import {
     closeFeatureGrid,
     toggleShowAgain,
     initPlugin,
-    sizeChange,
     storeAdvancedSearchFilter,
     setUp,
     setTimeSync,
@@ -215,10 +213,6 @@ describe('Test the featuregrid reducer', () => {
         expect(state.features).toExist();
         expect(state.features.length).toBe(1);
     });
-    it('dockSizeFeatures', () => {
-        let state = featuregrid( {}, dockSizeFeatures(200));
-        expect(state.dockSize).toBe(200);
-    });
     it('toggleEditMode edit', () => {
         let state = featuregrid( {}, toggleEditMode());
         expect(state.multiselect).toBeTruthy();
@@ -284,6 +278,8 @@ describe('Test the featuregrid reducer', () => {
         expect(state.attributes.attrA.test).toBe(false);
         state = featuregrid( state, customizeAttribute("attrA", "test", "value"));
         expect(state.attributes.attrA.test).toBe("value");
+        state = featuregrid( state, customizeAttribute("attrA", 'label', "label title"));
+        expect(state.attributes.attrA.label).toBe("label title");
     });
     it('startDrawingFeature', () => {
         let state = featuregrid( {drawing: true}, startDrawingFeature());
@@ -375,16 +371,6 @@ describe('Test the featuregrid reducer', () => {
                 }]}}));
         expect(state.localType).toBe("Point");
 
-    });
-    it('SIZE_CHANGE', () => {
-        let state = featuregrid({}, sizeChange(0.5, {maxDockSize: 0.7, minDockSize: 0.1}));
-        expect(state.dockSize).toBe(0.5);
-        state = featuregrid({}, sizeChange(0.8, {maxDockSize: 0.7, minDockSize: 0.1}));
-        expect(state.dockSize).toBe(0.7);
-        state = featuregrid({}, sizeChange(0.05, {maxDockSize: 0.7, minDockSize: 0.1}));
-        expect(state.dockSize).toBe(0.1);
-        state = featuregrid({}, sizeChange(0.5));
-        expect(state.dockSize).toBe(0.5);
     });
     it("storeAdvancedSearchFilter", () => {
         const filterObj = {test: 'test'};

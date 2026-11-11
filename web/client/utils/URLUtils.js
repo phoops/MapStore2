@@ -48,7 +48,7 @@ export const sameQueryParams = ( q1 = "", q2 = "") => {
  * @function
  * @memberof utils.URLUtils
  * @param  {string|string[]} u1 the first URL to compare (or an array of URLs)
- * @param  {string!string[]} u2 the second URL to compare with (or an array of URLs)
+ * @param  {string|string[]} u2 the second URL to compare with (or an array of URLs)
  * @return {boolean} true when urls are the same else false
  */
 export const isSameUrl = (u1, u2) => {
@@ -83,13 +83,43 @@ export const getQueryParams = (url) => {
 };
 
 /**
- * Validator of URL
+ * Validator of URL. check if a URL is valid and secure.
  * @param {string} url - url to validate
- * @param {RegExp} regexp - optional custom regexp
+ * @param {RegExp} [regexp] - optional custom regexp. If regexp is passed, options are ignored.
+ * @param {object} [options] optional configurations
+ * @param {string[]} [options.allowedProtocols] by default only http and https are allowed
+ * @param {string[]} [options.forbiddenMimes] if `data` is one of the protcol allowed, here a list of forbidden mime types that can be risky.
+ * by default `'text/html'`, `'text/javascript'`, `'application/javascript'`, `'image/svg+xml'` are forbidden.
  */
-export const isValidURL = (url, regexp = /^(http(s{0,1}):\/\/)+?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/) => {
-    const regex = new RegExp(regexp);
-    return regex.test(url);
+export const isValidURL = (url, regexp,
+    {
+        allowedProtocols = ['http', 'https'],
+        forbiddenMimes = ['text/html', 'text/javascript', 'application/javascript', 'image/svg+xml']
+    } = {}) => {
+    if (regexp) {
+        const regex = new RegExp(regexp);
+        return regex.test(url);
+    }
+    const base = url.indexOf('/') === 0 ? window?.location?.origin : undefined;
+    if (!URL.canParse(url, base)) {
+        return false;
+    }
+
+    const parsed = new URL(url, base);
+    const protocol = parsed.protocol.replace(':', '').toLowerCase();
+    // check allowed protocols
+    if (!allowedProtocols.map(p => p.toLowerCase()).includes(protocol)) {
+        return false;
+    }
+    if (protocol === 'data') {
+        // Il pathname di un data URI contiene il mime type (es. "image/png;base64")
+        const mimeType = parsed.pathname.split(';')[0] || '';
+        const isForbidden = forbiddenMimes.some(mime =>
+            mimeType.toLowerCase().includes(mime.toLowerCase())
+        );
+        return !isForbidden;
+    }
+    return true;
 };
 
 /**
@@ -117,9 +147,23 @@ export const isValidURLTemplate = (url, params, regexp = /^(http(s{0,1}):\/\/)+?
  * Use when calling implementations that do not know about array of urls, such as the `urlUtil` library,
  * while still supporting our implementation of domain aliases and domain sharding.
  *
- * @param {string || array} url - Either a string representing a valid url or an array of strings which are all valid urls.
+ * @param {string|string[]} url - Either a string representing a valid url or an array of strings which are all valid urls.
  * @returns {string} Returns the argument if the argument is string, otherwise if the argument is an array, returns the first element.
  */
 export const getDefaultUrl = (url) => {
     return isArray(url) ? url[0] : url;
 };
+
+/**
+ * Updates the given URL by adding or updating query parameters.
+ *
+ * @param {string} url - The source URL.
+ * @param {Object} params - The parameters to add or update.
+ * @returns {string} - The updated URL with new query parameters.
+ */
+export function updateUrlParams(url, params) {
+    const parsedUrl = queryString.parseUrl(url);
+    const updatedQuery = { ...parsedUrl?.query, ...params };
+    // TODO: use stringifyUrl instead after updating `query-string`, not supported in current version
+    return parsedUrl?.url + '?' + queryString.stringify(updatedQuery);
+}

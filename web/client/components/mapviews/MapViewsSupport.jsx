@@ -161,6 +161,7 @@ function MapViewsSupport({
     selectedId,
     defaultTitle = 'Map View',
     layers,
+    groups,
     locale,
     resources: resourcesProp = [],
     services,
@@ -383,7 +384,7 @@ function MapViewsSupport({
                                     <ButtonGroup>
                                         {(mapViewsStateHistory?.past?.length || 0) > 0 && <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             disabled={(mapViewsStateHistory?.past?.length || 0) === 0}
                                             onClick={() => handleHistory(UNDO_VIEWS_STATE)}
                                             tooltipId="mapViews.undoChanges"
@@ -393,7 +394,7 @@ function MapViewsSupport({
                                         </Button>}
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             onClick={handleCreateView.bind(null, undefined)}
                                             tooltipId="mapViews.addNewView"
                                             tooltipPosition="bottom"
@@ -424,7 +425,7 @@ function MapViewsSupport({
                             <div className="ms-map-views-header">
                                 {(selected?.description && !expanded) ?
                                     <Button
-                                        className="square-button-md no-border"
+                                        className="square-button no-border"
                                         style={{ borderRadius: '50%', marginRight: 4 }}
                                         onClick={() => setShowDescription(!showDescription)}
                                         tooltipId={showDescription ? 'mapViews.hideDescription' : 'mapViews.showDescription'}
@@ -448,7 +449,7 @@ function MapViewsSupport({
                                     {!play && <ButtonGroup>
                                         <Button
                                             bsStyle={expanded === 'list' ? 'success' : 'primary'}
-                                            className="square-button-md"
+                                            className="square-button"
                                             active={expanded === 'list'}
                                             onClick={() => setExpanded(expanded !== 'list' ? 'list' : '')}
                                             tooltipId={expanded === 'list' ? 'mapViews.hideViewsList' : 'mapViews.showViewsList'}
@@ -460,7 +461,7 @@ function MapViewsSupport({
                                     {(!play && edit) && <ButtonGroup>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             disabled={expanded === 'settings'}
                                             onClick={handleCreateView.bind(null, undefined)}
                                             tooltipId={selected ? 'mapViews.addNewViewBelowSelected' : 'mapViews.addNewView'}
@@ -470,7 +471,7 @@ function MapViewsSupport({
                                         </Button>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             disabled={!selected || expanded === 'settings'}
                                             onClick={handleCreateView.bind(null, selected)}
                                             tooltipId="mapViews.copyCurrentView"
@@ -480,7 +481,7 @@ function MapViewsSupport({
                                         </Button>
                                         <Button
                                             bsStyle={expanded === 'settings' ? 'success' : 'primary'}
-                                            className="square-button-md"
+                                            className="square-button"
                                             active={expanded === 'settings'}
                                             disabled={!selected}
                                             onClick={() => setExpanded(expanded !== 'settings' ? 'settings' : '')}
@@ -491,7 +492,7 @@ function MapViewsSupport({
                                         </Button>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             disabled={(mapViewsStateHistory?.past?.length || 0) === 0}
                                             onClick={() => handleHistory(UNDO_VIEWS_STATE)}
                                             tooltipId="mapViews.undoChanges"
@@ -501,7 +502,7 @@ function MapViewsSupport({
                                         </Button>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             disabled={(mapViewsStateHistory?.future?.length || 0) === 0}
                                             onClick={() => handleHistory(REDO_VIEWS_STATE)}
                                             tooltipId="mapViews.redoChanges"
@@ -513,7 +514,7 @@ function MapViewsSupport({
                                     <ButtonGroup>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             onClick={() => handleSelectView(views[0])}
                                             disabled={currentIndex === 0 || play}
                                             tooltipId="mapViews.gotToFirstView"
@@ -523,7 +524,7 @@ function MapViewsSupport({
                                         </Button>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             onClick={() => handleStepMove(-1)}
                                             disabled={!views[currentIndex - 1] || play}
                                             tooltipId="mapViews.gotToPreviousView"
@@ -533,7 +534,7 @@ function MapViewsSupport({
                                         </Button>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             active={!!play}
                                             disabled={views?.length === 1}
                                             onClick={() => setPlay(!play)}
@@ -544,7 +545,7 @@ function MapViewsSupport({
                                         </Button>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             onClick={() => handleStepMove(1)}
                                             disabled={!views[currentIndex + 1] || play}
                                             tooltipId="mapViews.gotToNextView"
@@ -554,7 +555,7 @@ function MapViewsSupport({
                                         </Button>
                                         <Button
                                             bsStyle="primary"
-                                            className="square-button-md"
+                                            className="square-button"
                                             onClick={() => handleSelectView(views[views?.length - 1])}
                                             disabled={currentIndex === views?.length - 1 || play}
                                             tooltipId="mapViews.gotToLastView"
@@ -597,6 +598,7 @@ function MapViewsSupport({
                                             onChange={handleUpdateView}
                                             onCaptureView={handleCaptureView}
                                             layers={layers}
+                                            groups={groups}
                                             locale={locale}
                                             services={services}
                                             selectedService={selectedService}

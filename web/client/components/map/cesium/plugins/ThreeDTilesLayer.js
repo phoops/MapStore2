@@ -11,12 +11,13 @@ import * as Cesium from 'cesium';
 import isEqual from 'lodash/isEqual';
 import isNumber from 'lodash/isNumber';
 import isNaN from 'lodash/isNaN';
-import { getProxyUrl, needProxy } from "../../../../utils/ProxyUtils";
+import { getProxyUrl } from "../../../../utils/ProxyUtils";
 import { getStyleParser } from '../../../../utils/VectorStyleUtils';
-import { polygonToClippingPlanes } from '../../../../utils/cesium/PrimitivesUtils';
 import tinycolor from 'tinycolor2';
 import googleOnWhiteLogo from '../img/google_on_white_hdpi.png';
 import googleOnNonWhiteLogo from '../img/google_on_non_white_hdpi.png';
+import { createClippingPolygonsFromGeoJSON, applyClippingPolygons } from '../../../../utils/cesium/PrimitivesUtils';
+import { getRequestConfigurationByUrl } from '../../../../utils/SecurityUtils';
 
 const cleanStyle = (style, options) => {
     if (style && options?.pointCloudShading?.attenuation) {
@@ -64,44 +65,45 @@ function updateModelMatrix(tileSet, { heightOffset }) {
 }
 
 function clip3DTiles(tileSet, options, map) {
-
-    const request = () => options.clippingPolygon
-        ? polygonToClippingPlanes(options.clippingPolygon, !!options.clippingPolygonUnion, options.clipOriginalGeometry)
-        : Promise.resolve([]);
-
-    request()
-        .then((planes) => {
-            if (planes?.length && !tileSet.clippingPlanes) {
-                tileSet.clippingPlanes = new Cesium.ClippingPlaneCollection({
-                    modelMatrix: Cesium.Matrix4.inverse(
-                        Cesium.Matrix4.multiply(
-                            tileSet.root.computedTransform,
-                            tileSet._initialClippingPlanesOriginMatrix,
-                            new Cesium.Matrix4()
-                        ),
-                        new Cesium.Matrix4()),
-                    planes,
-                    unionClippingRegions: !!options.clippingPolygonUnion
-                });
-            }
-            if (tileSet.clippingPlanes) {
-                tileSet.clippingPlanes.removeAll();
-                tileSet.clippingPlanes.unionClippingRegions = !!options.clippingPolygonUnion;
-                planes.forEach((plane) => {
-                    tileSet.clippingPlanes.add(plane);
-                });
-                map.scene.requestRender();
-            }
-        });
+    const polygons = createClippingPolygonsFromGeoJSON(options.clippingPolygon);
+    applyClippingPolygons({
+        target: tileSet,
+        polygons: polygons,
+        inverse: !!options.clippingPolygonUnion,
+        scene: map.scene
+    });
 }
 
-function ensureReady(tileSet, callback) {
-    if (tileSet.ready) {
-        callback();
-    } else {
-        tileSet.readyPromise.then(() => {
-            callback();
-        });
+const applyImageryLayers = (tileSet, options, map) => {
+    if (!options.enableImageryOverlay || !tileSet || tileSet.isDestroyed()) return;
+    // Collect map layers that should be applied to primitive
+    const mapLayers = [];
+    for (let i = 0; i < map.imageryLayers.length; i++) {
+        const layer = map.imageryLayers.get(i);
+        if (layer._position > options.position) {
+            mapLayers.push(layer);
+        }
+    }
+    // Add layers in the correct order
+    mapLayers.forEach((layer, idx) => {
+        const current = tileSet.imageryLayers.get(idx);
+        if (current !== layer) {
+            tileSet.imageryLayers.add(layer);
+        }
+    });
+    map.scene.requestRender();
+};
+
+let pendingCallbacks = {};
+
+function ensureReady(layer, callback, eventKey) {
+    const tileSet = layer.getTileSet();
+    if (!tileSet && eventKey) {
+        pendingCallbacks[eventKey] = callback;
+        return;
+    }
+    if (tileSet) {
+        callback(tileSet);
     }
 }
 
@@ -134,84 +136,125 @@ function updateShading(tileSet, options, map) {
     setTimeout(() => map.scene.requestRender());
 }
 
-Layers.registerType('3dtiles', {
-    create: (options, map) => {
-        if (!options.visibility) {
-            return {
-                detached: true,
-                getTileSet: () => undefined,
-                remove: () => {}
-            };
-        }
-        let tileSet;
-        const resource = new Cesium.Resource({
-            url: options.url,
-            proxy: needProxy(options.url) ? new Cesium.DefaultProxy(getProxyUrl()) : undefined
-            // TODO: axios supports also adding access tokens or credentials (e.g. authkey, Authentication header ...).
-            // if we want to use internal cesium functionality to retrieve data
-            // we need to create a utility to set a CesiumResource that applies also this part.
-            // in addition to this proxy.
-        });
-        let promise = Cesium.Cesium3DTileset.fromUrl(resource,
-            {
-                showCreditsOnScreen: true
-            }
-        ).then((_tileSet) => {
-            tileSet = _tileSet;
-            updateGooglePhotorealistic3DTilesBrandLogo(map, options, tileSet);
-            map.scene.primitives.add(tileSet);
-            // assign the original mapstore id of the layer
-            tileSet.msId = options.id;
-
-            ensureReady(tileSet, () => {
-                updateModelMatrix(tileSet, options);
-                clip3DTiles(tileSet, options, map);
-                updateShading(tileSet, options, map);
-                getStyle(options)
-                    .then((style) => {
-                        if (style) {
-                            tileSet.style = new Cesium.Cesium3DTileStyle(style);
-                        }
-                    });
-            });
-        });
-        const removeTileset = () => {
-            updateGooglePhotorealistic3DTilesBrandLogo(map, options, tileSet);
-            map.scene.primitives.remove(tileSet);
-            tileSet = undefined;
-        };
+const createLayer = (options, map) => {
+    if (!options.visibility) {
         return {
             detached: true,
-            getTileSet: () => tileSet,
-            resource,
-            remove: () => {
-                if (tileSet) {
-                    removeTileset();
-                    return;
-                }
+            getResource: () => undefined,
+            getTileSet: () => undefined,
+            add: () => {},
+            remove: () => {}
+        };
+    }
+    let tileSet;
+    let resource;
+    let promise;
+    const removeTileset = () => {
+        updateGooglePhotorealistic3DTilesBrandLogo(map, options, tileSet);
+        if (tileSet?.imageryLayers) {
+            tileSet.imageryLayers.removeAll(false);
+        }
+        map.scene.primitives.remove(tileSet);
+        tileSet = undefined;
+    };
+    const layer = {
+        getTileSet: () => tileSet,
+        getResource: () => resource
+    };
+
+    let timeout = undefined;
+
+    return {
+        detached: true,
+        ...layer,
+        add: () => {
+            const { headers, params } = getRequestConfigurationByUrl(options.url, null, options.security?.sourceId);
+            // delay creation of tileset when frequents recreation are requested
+            timeout = setTimeout(() => {
+                timeout = undefined;
+                resource = new Cesium.Resource({
+                    url: options.url,
+                    queryParameters: params,
+                    headers,
+                    proxy: options.forceProxy ? new Cesium.DefaultProxy(getProxyUrl()) : undefined
+                    // TODO: axios supports also adding access tokens or credentials (e.g. authkey, Authentication header ...).
+                    // if we want to use internal cesium functionality to retrieve data
+                    // we need to create a utility to set a CesiumResource that applies also this part.
+                    // in addition to this proxy.
+                });
+                promise = Cesium.Cesium3DTileset.fromUrl(resource,
+                    {
+                        showCreditsOnScreen: true
+                    }
+                ).then((_tileSet) => {
+                    tileSet = _tileSet;
+                    updateGooglePhotorealistic3DTilesBrandLogo(map, options, tileSet);
+                    map.scene.primitives.add(tileSet);
+                    // assign the original mapstore id of the layer
+                    tileSet.msId = options.id;
+                    ensureReady(layer, () => {
+                        updateModelMatrix(tileSet, options);
+                        clip3DTiles(tileSet, options, map);
+                        updateShading(tileSet, options, map);
+                        getStyle(options)
+                            .then((style) => {
+                                if (style) {
+                                    tileSet.style = new Cesium.Cesium3DTileStyle(style);
+                                }
+                                Object.keys(pendingCallbacks).forEach((eventKey) => {
+                                    pendingCallbacks[eventKey](tileSet);
+                                });
+                                pendingCallbacks = {};
+                                applyImageryLayers(tileSet, options, map);
+                            });
+                    });
+                });
+            }, 50);
+        },
+        remove: () => {
+            if (timeout) {
+                clearTimeout(timeout);
+                timeout = undefined;
+            }
+            if (tileSet) {
+                removeTileset();
+                return;
+            }
+            if (promise) {
                 promise.then(() => {
                     removeTileset();
                 });
-                return;
             }
-        };
-    },
+            return;
+        }
+    };
+};
+
+Layers.registerType('3dtiles', {
+    create: createLayer,
     update: function(layer, newOptions, oldOptions, map) {
-        const tileSet = layer?.getTileSet();
+        if (newOptions.forceProxy !== oldOptions.forceProxy
+            // recreate the tileset when the imagery has been updated and the layer has enableImageryOverlay set to true
+            || newOptions.enableImageryOverlay && (newOptions.imageryLayersTreeUpdatedCount !== oldOptions.imageryLayersTreeUpdatedCount)
+            || (newOptions.enableImageryOverlay !== oldOptions.enableImageryOverlay)
+            || !isEqual(oldOptions.security, newOptions.security)
+        ) {
+            return createLayer(newOptions, map);
+        }
         if (
             (!isEqual(newOptions.clippingPolygon, oldOptions.clippingPolygon)
             || newOptions.clippingPolygonUnion !== oldOptions.clippingPolygonUnion
             || newOptions.clipOriginalGeometry !== oldOptions.clipOriginalGeometry)
-         && tileSet) {
-            ensureReady(tileSet, () => {
+        ) {
+            ensureReady(layer, (tileSet) => {
                 clip3DTiles(tileSet, newOptions, map);
-            });
+            }, 'clip');
         }
         if ((
             !isEqual(newOptions.style, oldOptions.style)
             || newOptions?.pointCloudShading?.attenuation !== oldOptions?.pointCloudShading?.attenuation
-        ) && tileSet) {
-            ensureReady(tileSet, () => {
+        )) {
+            ensureReady(layer, (tileSet) => {
                 getStyle(newOptions)
                     .then((style) => {
                         if (style && tileSet) {
@@ -219,17 +262,17 @@ Layers.registerType('3dtiles', {
                             tileSet.style = new Cesium.Cesium3DTileStyle(style);
                         }
                     });
-            });
+            }, 'style');
         }
-        if (!isEqual(newOptions.pointCloudShading, oldOptions.pointCloudShading) && tileSet) {
-            ensureReady(tileSet, () => {
+        if (!isEqual(newOptions.pointCloudShading, oldOptions.pointCloudShading)) {
+            ensureReady(layer, (tileSet) => {
                 updateShading(tileSet, newOptions, map);
-            });
+            }, 'shading');
         }
-        if (tileSet && newOptions.heightOffset !== oldOptions.heightOffset) {
-            ensureReady(tileSet, () => {
+        if (newOptions.heightOffset !== oldOptions.heightOffset) {
+            ensureReady(layer, (tileSet) => {
                 updateModelMatrix(tileSet, newOptions);
-            });
+            }, 'matrix');
         }
         return null;
     }

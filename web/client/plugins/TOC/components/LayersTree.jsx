@@ -62,6 +62,7 @@ const loopGroupCondition = (groupNode, condition) => {
  * @prop {string} theme layers tree theme, one of undefined or `legend`
  * @prop {string} className additional class name for the layer tree
  * @prop {array} nodeItems list of node component to customize specific nodes, expected structure [ { name, Component, selector } ]
+ * @prop {array} nodeContentItems list of node content component to customize specific content available after expanding the node, expected structure [ { name, Component } ]
  * @prop {array} nodeToolItems list of node tool component to customize specific tool available on a node, expected structure [ { name, Component } ]
  * @prop {object} singleDefaultGroup if true it hides the default group nodes
  * @prop {string} noFilteredResultsMsgId message id for no result on filter
@@ -87,8 +88,10 @@ const LayersTree = ({
     className,
     nodeItems,
     nodeToolItems,
+    nodeContentItems,
     singleDefaultGroup = isSingleDefaultGroup(tree),
-    theme
+    theme,
+    getNodeStyle = () => ({})
 }) => {
 
     const containerNode = useRef();
@@ -113,10 +116,6 @@ const LayersTree = ({
     const getLayer = () => {
         const Layer = layerNodeComponent;
         return (<Layer />);
-    };
-
-    const getNodeStyle = () => {
-        return {};
     };
 
     const getNodeClassName = (currentNode) => {
@@ -204,6 +203,7 @@ const LayersTree = ({
                             onSelect={onSelect}
                             nodeItems={nodeItems}
                             nodeToolItems={nodeToolItems}
+                            nodeContentItems={nodeContentItems}
                         />
                     );
                 })}

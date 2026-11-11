@@ -11,7 +11,6 @@ import isNil from 'lodash/isNil';
 import isEqual from 'lodash/isEqual';
 import union from 'lodash/union';
 import isArray from 'lodash/isArray';
-import assign from 'object-assign';
 import axios from '../../../../libs/ajax';
 import CoordinatesUtils from '../../../../utils/CoordinatesUtils';
 import { getProjection } from '../../../../utils/ProjectionUtils';
@@ -30,6 +29,7 @@ import VectorTileSource from 'ol/source/VectorTile';
 import VectorTileLayer from 'ol/layer/VectorTile';
 
 import { isVectorFormat } from '../../../../utils/VectorTileUtils';
+import { isValidResponse } from '../../../../utils/WMSUtils';
 import { OL_VECTOR_FORMATS, applyStyle } from '../../../../utils/openlayers/VectorTileUtils';
 
 import { proxySource, getWMSURLs, wmsToOpenlayersOptions, toOLAttributions, generateTileGrid } from '../../../../utils/openlayers/WMSUtils';
@@ -74,12 +74,17 @@ const loadFunction = (options, headers) => function(image, src) {
                 headers,
                 responseType: 'blob'
             }).then(response => {
-                if (response.status === 200 && response.data) {
+                if (isValidResponse(response)) {
                     image.getImage().src = URL.createObjectURL(response.data);
                 } else {
-                    console.error("Status code: " + response.status);
+                    // #10701 this is needed to trigger the imageloaderror event
+                    // in ol otherwise this event is not triggered if you assign
+                    // the xml content of the exception to the src attribute
+                    image.getImage().src = null;
+                    console.error("error: " + response.data);
                 }
             }).catch(e => {
+                image.getImage().src = null;
                 console.error(e);
             });
         } else {
@@ -99,9 +104,9 @@ const createLayer = (options, map, mapId) => {
         }, map, mapId);
     }
     const urls = getWMSURLs(isArray(options.url) ? options.url : [options.url]);
-    const queryParameters = wmsToOpenlayersOptions(options) || {};
-    urls.forEach(url => addAuthenticationParameter(url, queryParameters, options.securityToken));
-    const headers = getAuthenticationHeaders(urls[0], options.securityToken);
+    let queryParameters = wmsToOpenlayersOptions(options) || {};
+    queryParameters = addAuthenticationParameter(urls[0] || '', queryParameters, options.securityToken, options.security?.sourceId);
+    const headers = getAuthenticationHeaders(urls[0], options.securityToken, options.security);
     const vectorFormat = isVectorFormat(options.format);
 
     if (options.singleTile && !vectorFormat) {
@@ -130,6 +135,7 @@ const createLayer = (options, map, mapId) => {
         tileGrid: generateTileGrid(options, map),
         tileLoadFunction: loadFunction(options, headers)
     };
+
     const wmsSource = new TileWMS({ ...sourceOptions });
     const layerConfig = {
         msId: options.id,
@@ -181,6 +187,8 @@ const mustCreateNewLayer = (oldOptions, newOptions) => {
         || oldOptions.forceProxy !== newOptions.forceProxy
         || oldOptions.tileGridStrategy !== newOptions.tileGridStrategy
         || !isEqual(oldOptions.tileGrids, newOptions.tileGrids)
+        || !isEqual(oldOptions.security, newOptions.security)
+        || !isEqual(oldOptions.requestRuleRefreshHash, newOptions.requestRuleRefreshHash)
     );
 };
 
@@ -250,7 +258,12 @@ Layers.registerType('wms', {
 
             needsRefresh = needsRefresh || changed;
         }
-
+        // refresh/update wms layer if there is error in loading tiles like: incorrect time dimension date filter, ..etc
+        if (oldOptions.loadingError !== "Error" && newOptions.loadingError === "Error") {
+            // Clear tile cache before refresh to avoid showing old broken tiles
+            wmsSource?.tileCache?.pruneExceptNewestZ?.();
+            wmsSource?.refresh();
+        }
         if (oldOptions.minResolution !== newOptions.minResolution) {
             layer.setMinResolution(newOptions.minResolution === undefined ? 0 : newOptions.minResolution);
         }
@@ -268,10 +281,10 @@ Layers.registerType('wms', {
             }
 
             if (changed) {
-                const params = assign(newParams, addAuthenticationToSLD(optionsToVendorParams(newOptions) || {}, newOptions));
+                const params = Object.assign(newParams, addAuthenticationToSLD(optionsToVendorParams(newOptions) || {}, newOptions));
 
-                wmsSource.updateParams(assign(params, Object.keys(oldParams || {}).reduce((previous, key) => {
-                    return !isNil(params[key]) ? previous : assign(previous, {
+                wmsSource.updateParams(Object.assign(params, Object.keys(oldParams || {}).reduce((previous, key) => {
+                    return !isNil(params[key]) ? previous : Object.assign(previous, {
                         [key]: undefined
                     });
                 }, {})));

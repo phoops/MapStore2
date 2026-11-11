@@ -18,13 +18,14 @@ import {
 } from '../actions/widgets';
 
 import { closeFeatureGrid } from '../actions/featuregrid';
+import { selectedLayerSelector } from "../selectors/featuregrid";
 import { drawSupportReset } from '../actions/draw';
 import { QUERY_FORM_SEARCH, loadFilter } from '../actions/queryform';
 import { setControlProperty, TOGGLE_CONTROL } from '../actions/controls';
 import { ADD_LAYER } from '../actions/layers';
 import { LOCATION_CHANGE } from 'connected-react-router';
 import { featureTypeSelected } from '../actions/wfsquery';
-import { getWidgetLayer, getEditingWidgetFilter, getWidgetFilterKey } from '../selectors/widgets';
+import { getWidgetLayer, getEditingWidgetFilter, getWidgetFilterKey, getEditingWidget } from '../selectors/widgets';
 import { wfsFilter } from '../selectors/query';
 import { widgetBuilderAvailable } from '../selectors/controls';
 import { generateNewTrace } from '../utils/WidgetsUtils';
@@ -51,7 +52,7 @@ export const initEditorOnNew = (action$, {getState = () => {}} = {}) => action$.
         mapSync: true,
         cartesian: true,
         yAxis: true,
-        ...w,
+        ...(w?.widget || {}),
         // override action's type
         type: undefined
     }, {step: 0})));
@@ -60,7 +61,7 @@ export const initEditorOnNewChart = (action$, {getState = () => {}} = {}) => act
     .switchMap(() => {
         const chartId = uuid();
         const state = getState();
-        const layer = getWidgetLayer(state);
+        const layer = selectedLayerSelector(state);
         return Rx.Observable.of(
             closeFeatureGrid(),
             editNewWidget({
@@ -105,15 +106,27 @@ export const handleWidgetsFilterPanel = (action$, {getState = () => {}} = {}) =>
                     action$.ofType(TOGGLE_CONTROL).filter(({control, property} = {}) => control === "queryPanel" && (!property || property === "enabled")).take(1)
                 )
                 // then close the query panel, open widget form and update the current filter for the widget in editing
-                    .switchMap( action =>
-                        (action.filterObj
-                            ? Rx.Observable.of(onEditorChange(getWidgetFilterKey(getState()), action.filterObj))
-                            : Rx.Observable.empty()
-                        )
-                            .merge(Rx.Observable.of(
-                                setControlProperty("widgetBuilder", "enabled", true)
-                            ))
-                    )
+                    .switchMap( action => {
+                        const currentState = getState();
+                        const editingWidget = getEditingWidget(currentState) || {};
+                        const actions = [];
+
+                        if (action.filterObj) {
+                            actions.push(onEditorChange(getWidgetFilterKey(currentState), action.filterObj));
+                        }
+                        // Reset edit context when query panel closes (save or cancel)
+                        if (editingWidget.editingUserDefinedItemId) {
+                            actions.push(onEditorChange('editingUserDefinedItemId', null));
+                        }
+                        if (editingWidget.editingDefaultFilter) {
+                            actions.push(onEditorChange('editingDefaultFilter', false));
+                        }
+
+                        return Rx.Observable.merge(
+                            actions.length > 0 ? Rx.Observable.from(actions) : Rx.Observable.empty(),
+                            Rx.Observable.of(setControlProperty("widgetBuilder", "enabled", true))
+                        );
+                    })
                 // if the widgetBuilder is closed or the page is changed, do not listen anymore
             ).takeUntil(
                 action$.ofType(LOCATION_CHANGE, EDIT)

@@ -29,7 +29,6 @@ import {
     deleteWidget,
     editWidget,
     exportCSV,
-    exportImage,
     toggleCollapse,
     toggleCollapseAll,
     toggleMaximize,
@@ -76,7 +75,6 @@ compose(
             toggleCollapse,
             toggleCollapseAll,
             toggleMaximize,
-            exportImage,
             deleteWidget,
             onLayoutChange: changeLayout
         }
@@ -103,6 +101,7 @@ compose(
         withProps(({
             width,
             rowHeight,
+            rowHeightGap = 20,
             cols,
             height,
             maximized,
@@ -118,7 +117,7 @@ compose(
                 : height - backgroundSelectorOffset - 120;
             const nRows = isSingleWidgetLayout ? 1 : 4;
             const rowHeightRecalculated = !isSingleWidgetLayout
-                ? Math.floor(divHeight / nRows - 20)
+                ? Math.floor(divHeight / nRows - rowHeightGap)
                 : divHeight > singleWidgetLayoutMaxHeight
                     ? singleWidgetLayoutMaxHeight
                     : divHeight < singleWidgetLayoutMinHeight
@@ -144,7 +143,7 @@ compose(
             } : {};
             const widthOptions = width ? {width: viewWidth - 1} : {};
             const baseHeight = isSingleWidgetLayout
-                ? rowHeight || rowHeightRecalculated
+                ? rowHeightRecalculated
                 : Math.floor((height - 100) / (rowHeightRecalculated + 10)) * (rowHeightRecalculated + 10);
             return ({
                 rowHeight: isSingleWidgetLayout ? rowHeightRecalculated : rowHeight || rowHeightRecalculated,
@@ -155,7 +154,7 @@ compose(
                 useDefaultWidthProvider: false,
                 style: {
                     left: leftOffset + 'px',
-                    bottom: 65 + backgroundSelectorOffset,
+                    bottom: 35 + backgroundSelectorOffset,
                     height: baseHeight,
                     width: viewWidth + 'px',
                     position: 'absolute',
@@ -307,6 +306,7 @@ class Widgets extends React.Component {
  * @prop {boolean|string|array} [toolsOptions.showHide] show the "hide tool" for the widget (the tool allows to hide the widget to users that have `seeHidden=false` ). By default is false, in the most common case it should be the same of `seeHidden`.
  * @prop {boolean|string|array} [toolsOptions.seeHidden] hides the widgets under particular conditions
  * @prop {number} cfg.rowHeight Rows have a static height
+ * @prop {number} cfg.rowHeightGap 20 by default. Describe the margin from bottom used to calculate the rowHeight. Useful if the layout has some CSS customization
  * @prop {object} cfg.cols Number of columns in this layout. default is { md: 6, xxs: 1 }
  * @prop {object} cfg.defaults options that are used to initialize the plugin when mounted
  * @prop {object} cfg.defaults.initialSize new widget's default sizes in grid units. It contains 2 integers, `w` and `h`, representing the initial size of the new widget. This is useful when customizing `rowHeight` and/or `cols`, to generate a widget with a proportionated size.
@@ -351,5 +351,8 @@ export default createPlugin("WidgetsPlugin", {
     reducers: {
         widgets: require('../reducers/widgets').default
     },
-    epics: require('../epics/widgets').default
+    epics: {
+        ...require('../epics/widgets').default,
+        ...require('../epics/interactions').default
+    }
 });

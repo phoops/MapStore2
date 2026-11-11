@@ -20,17 +20,21 @@ This is the main structure:
   "printUrl": "/geoserver-test/pdf/info.json",
   // a string or an object for the proxy URL.
   "proxyUrl": {
+    // When autoDetectCORS is not present it is true by default
+    // if autoDetectCORS=true, the application will try the CORS request first, than will try to use the proxy if the request fails.
+    // In case it is false the application will use the proxy for all the requests except the ones in the useCORS array.
+    // note: this parameter is actually not supported by Cesium, that will always use the proxy or the CORS request when in useCORS array.
+    "autoDetectCORS": false,
     // if it is an object, the url entry holds the url to the proxy
     "url": "/MapStore2/proxy/?url=",
-    // useCORS array contains a list of services that support CORS and so do not need a proxy
+    // useCORS array contains a list of services that support CORS and so do not need a proxy in case of autoDetectCORS = false
+    // if autoDetectCORS is missing or true, this array will be ignored (except for Cesium)
     "useCORS": ["http://nominatim.openstreetmap.org", "https://nominatim.openstreetmap.org"]
   },
   // JSON file where uploaded extensions are configured
   "extensionsRegistry": "extensions.json",
   // URL of the folder from where extensions bundles and other assets are loaded
   "extensionsFolder": "",
-  // API keys for bing and mapquest services
-  "bingApiKey",
   // force dates to be in this specified format. use moment js format pattern
   "forceDateFormat": "YYYY-MM-DD",
   // force time to be in this specified format. use moment js format pattern
@@ -41,17 +45,30 @@ This is the main structure:
   // path to the translation files directory (if different from default)
   "translationsPath",
   // if true, every ajax and mapping request will be authenticated with the configurations if match a rule (default: true)
-  "useAuthenticationRules": true
-  // the authentication rules to match
-  "authenticationRules": [
-  { // every rule has a `urlPattern` regex to match
-    "urlPattern": ".*geostore.*",
-    // and a authentication `method` to use (basic, authkey, browserWithCredentials)
-    "method": "basic"
-  }, {
-    "urlPattern": "\\/geoserver.*",
-    "method": "authkey"
-  }],
+  // the request configuration rules to match
+  "requestsConfigurationRules": [
+    { // every rule has a `urlPattern` regex to match
+      "urlPattern": ".*geostore.*",
+      // headers to add to matching requests
+      "headers": {
+        "Authorization": "Bearer ${securityToken}"
+      }
+    }, {
+      "urlPattern": "\\/geoserver/.*",
+      // parameters to add to matching requests
+      "params": {
+        "authkey": "${securityToken}"
+      }
+    }, {
+      "urlPattern": ".*azure-blob.*",
+      // expiration timestamp (optional, Unix timestamp in seconds)
+      "expires": 1735689600,
+      // parameters can be used for SAS tokens
+      "params": {
+        "sv": "2024-11-04",
+        "sig": "${sasToken}"
+      }
+    }],
   // flag for postponing mapstore 2 load time after theme
   "loadAfterTheme": false,
   // if defined, WMS layer styles localization will be added
@@ -142,9 +159,63 @@ For configuring plugins, see the [Configuring Plugins Section](plugins-documenta
 
 ## Explanation of some config properties
 
-- **loadAfterTheme** is a flag that allows to load mapstore.js after the theme which can be versioned or not(default.css). default is false
-- **initialState** is an object that will initialize the state with some default values and this WILL OVERRIDE the initialState imposed by plugins & reducers.
-- **projectionDefs** is an array of objects that contain definitions for Coordinate Reference Systems
+- `loadAfterTheme`: is a flag that allows to load mapstore.js after the theme which can be versioned or not(default.css). default is false
+- `initialState`: is an object that will initialize the state with some default values and this WILL OVERRIDE the initialState imposed by plugins & reducers.
+- `projectionDefs`: is an array of objects that contain definitions for Coordinate Reference Systems
+- `gridFiles`: is an object that contains definitions for grid files used in coordinate transformations
+- `useAuthenticationRules` (deprecated): if this flag is set to true, legacy `authenticationRules` will be used. The new `requestsConfigurationRules` system does not require this flag and is always active when rules are present.
+- `requestsConfigurationRules`: is an array of objects that contain rules to match for request configuration. Each rule has a `urlPattern` regex to match and either `headers`, `params`, or `withCredentials` configuration. If the URL of a request matches the `urlPattern` of a rule, the configuration will be applied to the request.
+
+  **Available variable for template substitution (ES6 template syntax `${variable}`):**
+  - `${securityToken}` - The current MapStore session token (automatically replaced)
+
+  **Configuration options:**
+  - `headers` - Object containing HTTP headers to add to matching requests. Example:
+  
+    ```json
+    {
+      "urlPattern": ".*geostore.*",
+      "headers": {
+        "Authorization": "Bearer ${securityToken}"
+      }
+    }
+    ```
+  
+  - `params` - Object containing query parameters to add to matching requests. Example:
+  
+    ```json
+    {
+      "urlPattern": "\\/geoserver/.*",
+      "params": {
+        "authkey": "${securityToken}"
+      }
+    }
+    ```
+  
+  - `withCredentials` - Boolean to enable sending credentials with requests (useful with proxies):
+  
+    ```json
+    {
+      "urlPattern": ".*internal-api.*",
+      "withCredentials": true
+    }
+    ```
+  
+  - `expires` - Optional Unix timestamp (in seconds) for automatic rule expiration. Example:
+  
+    ```json
+    {
+      "urlPattern": ".*azure-blob.*",
+      "expires": 1735689600,
+      "params": {
+        "sv": "2024-11-04",
+        "sig": "token"
+      }
+    }
+    ```
+
+!!! note "Backward Compatibility"
+    The old `useAuthenticationRules` and `authenticationRules` configuration still works and will be automatically converted to the new format. However, the new format is recommended for better flexibility and features like expiration support.
 
 ### initialState configuration
 
@@ -297,6 +368,71 @@ Explanation of these properties:
 
 These parameters for a projection of interest can be found on [epsg.io](https://epsg.io)
 
+### gridFiles configuration
+
+Grid files are used for high-precision coordinate transformations, especially for local coordinate systems that require datum shifts. Grid files can be configured at the root level of `localConfig.json` file. For example:
+
+```javascript
+"gridFiles": {
+  "ntv2_0.gsb": {
+    "type": "gsb",
+    "path": "https://your-domain.com/grids/ntv2_0.gsb"
+  },
+  "egm08_25.gtx": {
+    "type": "geotiff",
+    "path": "https://your-domain.com/grids/egm08_25.tif"
+  },
+  "PENR2009.gsb": {
+    "type": "gsb",
+    "path": "https://your-domain.com/grids/PENR2009.gsb",
+    "description": "ETRS89 transformation grid"
+  }
+}
+```
+
+Explanation of these properties:
+
+- **gridName** - a unique identifier for the grid file (e.g., "ntv2_0.gsb")
+- **type** - the type of grid file:
+  - `gsb` - NADCON grid files (.gsb format)
+  - `geotiff` - GeoTIFF grid files (.tif format)
+- **path** - the URL to the grid file (must be accessible via HTTP/HTTPS, not local file paths)
+
+Grid files are automatically loaded and registered with the coordinate transformation system when MapStore starts. These grids can then be referenced in projection definitions using the `@gridName` syntax in the PROJ.4 definition string. Example of `localConfig.json` :
+
+```json
+{
+"gridFiles": {
+       "PENR2009": {
+         "path": "http://localhost:8000/PENR2009.gsb",
+         "type": "gsb",
+         "description": "ETRS89 transformation grid"
+       }
+     },
+     "projectionDefs": [
+       {
+         "code": "EPSG:25830",
+         "def": "+proj=utm +zone=30 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs +nadgrids=PENR2009",
+         "extent": [
+           166021.44,
+           0,
+           833978.56,
+           9329005.18
+         ],
+         "worldExtent": [
+           -18,
+           27,
+           5,
+           44
+         ]
+       },
+```
+
+Here you can see in definition `+nadgrids=PENR2009`. The same is valid for `geotiff` or `gsb` types.
+
+!!! warning
+    **Important**: Grid file paths must be accessible via HTTP/HTTPS URLs, not local file paths ( and that CORS is properly configured if the files are hosted on external domains). Do not use `localhost` or local file system paths like `file://` or relative paths. The grid files should be hosted on a web server that is accessible from the MapStore application.
+
 ### CRS Selector configuration
 
 CRS Selector is a plugin, that is configured in the plugins section. It should look like this:
@@ -308,14 +444,9 @@ CRS Selector is a plugin, that is configured in the plugins section. It should l
     ...}, {
       "name": "CRSSelector",
       "cfg": {
-        "additionalCRS": {
-          "EPSG:3003": {
-            label: "Monte Mario"
-          }
-        },
-        "filterAllowedCRS": [
-          "EPSG:4326",
-          "EPSG:3857"
+        "availableProjections": [
+          { "value": "EPSG:4326", "label": "EPSG:4326" },
+          { "value": "EPSG:3857", "label": "EPSG:3857" }
         ],
         "allowedRoles": [
           "ADMIN"
@@ -328,14 +459,20 @@ CRS Selector is a plugin, that is configured in the plugins section. It should l
 
 Configuration parameters are to be placed in the "cfg" object. These parameters are:
 
-- **additionalCRS** - object, that contains additional Coordinate Reference Systems. This configuration parameter lets you specify which projections, defined in **projectionDefs**, should be displayed in the CRS Selector, alongside default projections.
+- **additionalCRS** (deprecated) - object, that contains additional Coordinate Reference Systems. This configuration parameter lets you specify which projections, defined in **projectionDefs**, should be displayed in the CRS Selector, alongside default projections.
 Every additional CRS is a property of **additionalCRS** object. The name of that property is a code of a corresponding projection definition in **projectionDefs**. The value of that property is an object
 with the following properties:
   - **label** - a string, that will be displayed in the CRS Selector as a name of the projection
-- **filterAllowedCRS** - which default projections are to be available in the selector. Default projections are:
+- **filterAllowedCRS** (deprecated) - which default projections are to be available in the selector. Default projections are:
+  - EPSG:3857
+  - EPSG:4326
+- **availableProjections** - array, that contains Coordinate Reference Systems which are to be available in the selector. Default projections are:
   - EPSG:3857
   - EPSG:4326
 - **allowedRoles** - CRS Selector will be accessible only to these roles. By default, CRS Selector will be available for any logged in user.
+
+!!! note "Backward Compatibility"
+    The old `additionalCRS` and `filterAllowedCRS` configuration still works and will be automatically converted to the new format. However, the new format is recommended for better flexibility and features.
 
 ### Search plugin configuration
 

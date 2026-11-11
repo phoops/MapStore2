@@ -10,15 +10,15 @@ import Layers from '../../../../utils/cesium/Layers';
 import * as Cesium from 'cesium';
 import ConfigUtils from '../../../../utils/ConfigUtils';
 import {
-    getProxyUrl,
-    needProxy
+    getProxyUrl
 } from '../../../../utils/ProxyUtils';
 import * as WMTSUtils from '../../../../utils/WMTSUtils';
 import { creditsToAttribution, getAuthenticationParam, getURLs } from '../../../../utils/LayersUtils';
-import assign from 'object-assign';
-import { isObject, isArray, slice, get, head} from 'lodash';
+import { isEqual, isObject, isArray, slice, get, head} from 'lodash';
+
 import urlParser from 'url';
 import { isVectorFormat } from '../../../../utils/VectorTileUtils';
+import { getRequestConfigurationByUrl } from '../../../../utils/SecurityUtils';
 
 function splitUrl(originalUrl) {
     let url = originalUrl;
@@ -110,17 +110,28 @@ function wmtsToCesiumOptions(_options) {
     let proxyUrl = ConfigUtils.getProxyUrl({});
     let proxy;
     if (proxyUrl) {
-        proxy = needProxy(options.url) && proxyUrl;
+        proxy = options.forceProxy;
     }
     const isValid = isValidTile(options.matrixIds && options.matrixIds[tileMatrixSetID]);
     const queryParametersString = urlParser.format({ query: {...getAuthenticationParam(options)}});
     const cr = options.credits;
     const credit = cr ? new Cesium.Credit(creditsToAttribution(cr)) : '';
-    return assign({
+
+    let headersOpts;
+    if (options.security && options.url) {
+        const urlToCheck = isArray(options.url) ? options.url[0] : options.url;
+        const requestConfig = getRequestConfigurationByUrl(urlToCheck, null, options.security?.sourceId);
+
+        if (requestConfig.headers) {
+            headersOpts = { headers: requestConfig.headers };
+        }
+    }
+    return Object.assign({
         // TODO: multi-domain support, if use {s} switches to RESTFul mode
         url: new Cesium.Resource({
             url: head(getURLs(isArray(options.url) ? options.url : [options.url], queryParametersString)),
-            proxy: proxy && new WMTSProxy(proxy) || new NoProxy()
+            proxy: proxy && new WMTSProxy(proxy) || new NoProxy(),
+            ...(headersOpts)
         }),
         // set image format to png if vector to avoid errors while switching between map type
         format: isVectorFormat(options.format) && 'image/png' || options.format || 'image/png',
@@ -150,8 +161,8 @@ const createLayer = options => {
     const orig = layer.requestImage;
     layer.requestImage = (x, y, level) => cesiumOptions.isValid(x, y, level) ? orig.bind(layer)( x, y, level) : new Promise( () => undefined);
     layer.updateParams = (params) => {
-        const newOptions = assign({}, options, {
-            params: assign({}, options.params || {}, params)
+        const newOptions = Object.assign({}, options, {
+            params: Object.assign({}, options.params || {}, params)
         });
         return createLayer(newOptions);
     };
@@ -161,7 +172,8 @@ const createLayer = options => {
 const updateLayer = (layer, newOptions, oldOptions) => {
     if (newOptions.securityToken !== oldOptions.securityToken
     || oldOptions.format !== newOptions.format
-    || oldOptions.credits !== newOptions.credits) {
+    || !isEqual(oldOptions.security, newOptions.security)
+    || oldOptions.credits !== newOptions.credits || newOptions.forceProxy !== oldOptions.forceProxy) {
         return createLayer(newOptions);
     }
     return null;

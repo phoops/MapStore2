@@ -37,7 +37,6 @@ const SUCCESS = "ms-success";
  * @param {object} defaultVars variables of the theme used to initialize the pickers
  * @param {object} basic variables to use if a theme is not selected
  * @param {string} varName variable name to be use for comparison
- * @returns
  */
 const hasColorChanged = (vars, defaultVars, basic, varName) => {
     return !tinycolor.equals(vars?.[varName], defaultVars?.[varName] || basic[varName]);
@@ -49,7 +48,6 @@ const hasColorChanged = (vars, defaultVars, basic, varName) => {
  * @param {object} basicVariables the variables used as default values if a theme is not selected
  * @param {object[]} themes the list of themes to show in the selector field
  * @param {boolean} customVariablesEnabled flag to enabled/disable the custom variables section
- * @returns
  */
 function ConfigureThemes({
     themes = [],
@@ -204,7 +202,7 @@ function ConfigureThemes({
                                 </div>
                             }><Button
                                 disabled={!customVariablesEnabled}
-                                className="square-button-md no-border"
+                                className="square-button no-border"
                                 style={{ display: mostReadableTextColor ? 'block' : 'none' }}>
                                 <Glyphicon glyph="exclamation-mark"/>
                             </Button>
@@ -321,7 +319,7 @@ function ConfigureThemes({
                                 </div>
                             }><Button
                                 disabled={!customVariablesEnabled}
-                                className="square-button-md no-border"
+                                className="square-button no-border"
                                 style={{ display: mostReadablePrimaryContrastColor ? 'block' : 'none' }}>
                                 <Glyphicon glyph="exclamation-mark"/>
                             </Button>
@@ -438,7 +436,7 @@ function ConfigureThemes({
                                 </div>
                             }><Button
                                 disabled={!customVariablesEnabled}
-                                className="square-button-md no-border"
+                                className="square-button no-border"
                                 style={{ display: mostReadableSuccessContrastColor ? 'block' : 'none' }}>
                                 <Glyphicon glyph="exclamation-mark"/>
                             </Button>
@@ -518,7 +516,7 @@ function ConfigureThemes({
                                 </div>
                             }><Button
                                 disabled={!customVariablesEnabled}
-                                className="square-button-md no-border"
+                                className="square-button no-border"
                                 style={{ display: mostReadableSuccessPrimaryColor ? 'block' : 'none' }}>
                                 <Glyphicon glyph="exclamation-mark"/>
                             </Button>

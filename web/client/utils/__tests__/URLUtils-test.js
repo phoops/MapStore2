@@ -7,7 +7,7 @@
  */
 import expect from 'expect';
 
-import { urlParts, isSameUrl, sameQueryParams, isValidURL, isValidURLTemplate, getDefaultUrl } from '../URLUtils';
+import { urlParts, isSameUrl, sameQueryParams, isValidURL, isValidURLTemplate, getDefaultUrl, updateUrlParams } from '../URLUtils';
 
 const url1 = "https://demo.geo-solutions.it:443/geoserver/wfs";
 const url2 = "https://demo.geo-solutions.it/geoserver/wfs";
@@ -127,6 +127,12 @@ describe('URLUtils', () => {
         expect(isValidURL('lorem-ipsum-dolor-sit-amet')).toBe(false);
         expect(isValidURL('lorem ipsum dolor sit amet')).toBe(false);
         expect(isValidURL('lorem')).toBe(false);
+        expect(isValidURL('data:text/html,<script>something;</script>')).toBe(false);
+        expect(isValidURL('javascript:something;')).toBe(false); // eslint-disable-line no-script-url
+        expect(isValidURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', undefined, {
+            allowedProtocols: ['data']
+        })).toBe(true);
+
     });
     const SAMPLE_URL_TEMPLATES = [
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -178,6 +184,17 @@ describe('URLUtils', () => {
         ];
 
         expect(getDefaultUrl(_url)).toBe(_url[0]);
+    });
+
+    it("update Url params", () => {
+        const url = 'https://my-site.com/some/path/to/resouce?query=true&passtest=true';
+        const updatedUrl = updateUrlParams(url, { query: false, passtest: false });
+        expect(updatedUrl).toBe('https://my-site.com/some/path/to/resouce?passtest=false&query=false');
+    });
+    it("add new Url param", () => {
+        const url = 'https://my-site.com/some/path/to/resouce';
+        const updatedUrl = updateUrlParams(url, { newParam: 'newValue' });
+        expect(updatedUrl).toBe('https://my-site.com/some/path/to/resouce?newParam=newValue');
     });
 });
 

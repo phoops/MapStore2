@@ -88,6 +88,12 @@
             .background-color-var(@theme-vars[selected-bg]);
             .outline-color-var(@theme-vars[focus-color]);
         }
+        .ms-legend-rule.filter-enabled:hover,.wms-json-legend-rule.filter-enabled:hover {
+            .background-color-var(@theme-vars[selected-hover-bg]);
+        }
+        .ms-legend-rule.filter-enabled.active, .wms-json-legend-rule.filter-enabled.active {
+            .background-color-var(@theme-vars[selected-bg]);
+        }
     }
 }
 
@@ -152,8 +158,8 @@
         margin: 0;
     }
     .toc-toolbar-button {
-        width: @square-btn-medium-size;
-        height: @square-btn-medium-size;
+        width: @square-btn-size;
+        height: @square-btn-size;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -162,8 +168,8 @@
     .dropdown-toggle {
         padding: 0;
         border: transparent;
-        height: @square-btn-medium-size;
-        width: @square-btn-medium-size / 2;
+        height: @square-btn-size;
+        width: @square-btn-size;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -179,7 +185,21 @@
         }
     }
     .ms-toc-toolbar-dropdown {
-        width: @square-btn-medium-size / 2;
+        width: @square-btn-size / 2;
+    }
+    .ms-toc-toolbar-content {
+        button {
+            border-radius: 0;
+        }
+        div button { border-radius: 0; }
+        div button.is-first:first-of-type {
+            border-top-left-radius: @border-radius-base;
+            border-bottom-left-radius: @border-radius-base;
+        }
+        div button.is-last:last-of-type {
+            border-top-right-radius: @border-radius-base;
+            border-bottom-right-radius: @border-radius-base;
+        }
     }
 }
 
@@ -249,7 +269,7 @@
     }
     .ms-node-layer {
         .shadow-soft();
-        ul {
+        ul:not(.ms-legend) {
             padding: 4px 8px;
         }
     }
@@ -388,15 +408,38 @@
     }
 }
 
-// legend for vector wfs styles
-.ms-vector-legend {
+// style for wms json legend
+.wms-legend {
+    .wms-json-legend-rule {
+        display: flex;
+        margin-bottom: @padding-left-square;
+        .ms-legend-icon {
+            margin-right: 8px;
+        }
+    }
+}
+
+// legend style
+.ms-legend-title {
+    font-weight: bold;
+    margin: 8px 0;
+}
+.ms-legend {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    .ms-vector-legend-rule {
+    gap: 4px;
+    ul& {
+        border-left: none;
+        padding-left: 0;
+    }
+    .ms-legend-rule {
         display: flex;
     }
-    .ms-rule-legend-icon {
-        margin-right: 4px;
+    .ms-legend-icon {
+        margin-right: 8px;
+        align-items: normal;
     }
+}
+.ms-legend-rule.filter-enabled:hover, .wms-json-legend-rule.filter-enabled:hover {
+    cursor: pointer;
 }

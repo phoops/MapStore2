@@ -7,19 +7,17 @@
  */
 
 import { Observable } from 'rxjs';
-import { isValidURLTemplate } from '../../utils/URLUtils';
+import { isValidURL } from '../../utils/URLUtils';
 import { preprocess as commonPreprocess } from './common';
 import { getCapabilities } from '../Model';
 
 function validateUrl(serviceUrl) {
-    if (isValidURLTemplate(serviceUrl)) {
+    if (isValidURL(serviceUrl)) {
         const parts = serviceUrl.split(/\./g);
         // remove query params
         const ext = (parts[parts.length - 1] || '').split(/\?/g)[0];
         // from spec: IFC files use the .ifc extension.
-        return ext === 'ifc'
-            ? true
-            : false;
+        return ext === 'ifc';
     }
     return false;
 }

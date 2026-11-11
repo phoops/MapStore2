@@ -11,10 +11,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import Rx from 'rxjs';
 import url from 'url';
+import * as TestUtils from 'react-dom/test-utils';
 
 import Legend from '../Legend';
-
-import * as TestUtils from 'react-dom/test-utils';
 
 describe("test the Layer legend", () => {
     beforeEach((done) => {
@@ -37,14 +36,14 @@ describe("test the Layer legend", () => {
             "visibility": true
         };
         const tb = ReactDOM.render(<Legend layer={layer}/>, document.getElementById("container"));
-        expect(tb).toExist();
+        expect(tb).toBeTruthy();
 
     });
 
     it('create component without layer', () => {
 
         const tb = ReactDOM.render(<Legend />, document.getElementById("container"));
-        expect(tb).toExist();
+        expect(tb).toBeTruthy();
 
     });
     it('test legend content', () => {
@@ -176,13 +175,15 @@ describe("test the Layer legend", () => {
             "name": "layer3",
             "format": "image/png"
         };
-        ReactDOM.render(
-            <Legend
-                layer={layer}
-                currentZoomLvl={2.3456}
-                scales={[10000, 5000, 2000, 1000]}
-            />,
-            document.getElementById("container"));
+        TestUtils.act(() => {
+            ReactDOM.render(
+                <Legend
+                    layer={layer}
+                    currentZoomLvl={2.3456}
+                    scales={[10000, 5000, 2000, 1000]}
+                />,
+                document.getElementById("container"));
+        });
         const legendImage = document.querySelector("img");
         expect(legendImage).toBeTruthy();
         const { query } = url.parse(legendImage.getAttribute('src'), true);
@@ -197,16 +198,36 @@ describe("test the Layer legend", () => {
             "name": "layer3",
             "format": "image/png"
         };
-        ReactDOM.render(
-            <Legend
-                layer={layer}
-                currentZoomLvl={10}
-                scales={[10000, 5000, 2000, 1000]}
-            />,
-            document.getElementById("container"));
+        TestUtils.act(() => {
+            ReactDOM.render(
+                <Legend
+                    layer={layer}
+                    currentZoomLvl={10}
+                    scales={[10000, 5000, 2000, 1000]}
+                />,
+                document.getElementById("container"));
+        });
         const legendImage = document.querySelector("img");
         expect(legendImage).toBeTruthy();
         const { query } = url.parse(legendImage.getAttribute('src'), true);
         expect(query.SCALE).toBe('1000');
+    });
+    it('should trigger onChange callback with legendEmpty at true with with small 1px x 2px img error', (done) => {
+        const layer = {
+            type: 'wms',
+            url: 'base/web/client/test-resources/img/geoserver-GetLegendGraphic.image',
+            visibility: true,
+            title: 'layer',
+            name: 'layer',
+            format: 'image/png'
+        };
+        ReactDOM.render(<Legend layer={layer} onChange={(value) => {
+            try {
+                expect(value).toEqual({ legendEmpty: true });
+            } catch (e) {
+                done(e);
+            }
+            done();
+        }} />, document.getElementById("container"));
     });
 });

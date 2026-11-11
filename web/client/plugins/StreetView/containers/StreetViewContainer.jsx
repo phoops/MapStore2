@@ -10,11 +10,13 @@ import {Resizable} from 'react-resizable';
 import { enabledSelector } from '../selectors/streetView';
 import GStreetViewPanel from './GStreetViewPanel';
 import CyclomediaViewPanel from './CyclomediaViewPanel';
+import MapillaryViewPanel from './MapillaryViewPanel';
 import { toggleStreetView } from '../actions/streetView';
 
 const panels = {
     google: GStreetViewPanel,
-    cyclomedia: CyclomediaViewPanel
+    cyclomedia: CyclomediaViewPanel,
+    mapillary: MapillaryViewPanel
 };
 
 
@@ -25,9 +27,8 @@ const panels = {
  * @param {string} props.provider the Street View provider.
  * @param {object} props.panelSize the size of the panel. Example: `{"width": 500, "height": 500}`.
  * @param {object} props.providerSettings the settings specific for the provider.
- * @returns
  */
-function Panel({enabled, onClose = () => {}, provider, panelSize, providerSettings}) {
+function Panel({enabled, onClose = () => {}, provider, panelSize, providerSettings, apiKey, resetStViewData}) {
     const margin = 10;
     const [size, setSize] = useState({width: 400, height: 300, ...panelSize});
     const StreetViewPanel = useMemo(() => panels[provider], [provider]);
@@ -47,7 +48,7 @@ function Panel({enabled, onClose = () => {}, provider, panelSize, providerSettin
             role="header"
             style={{ display: "flex", justifyContent: "space-between" }}
         >
-            <span>
+            <span className="modal-title">
                 <Message msgId={"streetView.title"} />
             </span>
             <button onClick={() => onClose()} className="close">
@@ -71,7 +72,10 @@ function Panel({enabled, onClose = () => {}, provider, panelSize, providerSettin
                 }}>
                     {StreetViewPanel
                         ? <StreetViewPanel
+                            resetStViewData={resetStViewData}
+                            onClose={onClose}
                             providerSettings={providerSettings}
+                            apiKey={apiKey}
                             enabled={enabled}
                             size={size}
                             style={{

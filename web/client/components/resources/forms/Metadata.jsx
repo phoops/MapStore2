@@ -26,6 +26,7 @@ const FormControl = localizedProps('placeholder')(BFormControl);
 
 /**
  * A DropDown menu for user details:
+ * @deprecated
  */
 class Metadata extends React.Component {
     static propTypes = {
@@ -80,7 +81,7 @@ class Metadata extends React.Component {
 
     render() {
         const title = get(this.props.resource, 'attributes.title', "");
-        return (<form ref="metadataForm" onSubmit={this.handleSubmit}>
+        return (<form ref="metadataForm" className="metadataForm" onSubmit={this.handleSubmit}>
             <FormGroup>
                 <ControlLabel>{this.props.nameFieldText}</ControlLabel>
                 <FormControl

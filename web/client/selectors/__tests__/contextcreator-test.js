@@ -15,7 +15,9 @@ import {
     isNewContext,
     prefetchedDataSelector,
     disableImportSelector,
-    generateContextResource
+    generateContextResource,
+    isNewPluginsUploaded,
+    hideUploadExtensionSelector
 } from '../contextcreator';
 
 const testState = {
@@ -191,5 +193,54 @@ describe('contextcreator selectors', () => {
         expect(generatedSource.data.plugins).toEqual(expected.data.plugins);
         expect(generatedSource.data.plugins).toEqual(expected.data.plugins);
         expect(generatedSource.data.theme).toEqual(expected.data.theme);
+    });
+    it('loadExtensionsSelector', () => {
+        expect(isNewPluginsUploaded({
+            contextcreator: {
+                uploadedPlugins: ["Name"]
+            }
+        })).toBeTruthy();
+        expect(isNewPluginsUploaded({
+            contextcreator: {
+                uploadedPlugins: []
+            }
+        })).toBeFalsy();
+    });
+    it('hideUploadExtensionSelector', () => {
+        expect(hideUploadExtensionSelector()).toBe(true);
+        expect(hideUploadExtensionSelector({ security: { user: { role: 'ADMIN' } } })).toBe(false);
+        expect(hideUploadExtensionSelector({ security: { user: { role: 'ADMIN' } } }, { hideUploadExtension: true })).toBe(true);
+    });
+    it('exclude tags from generateContextResource', () => {
+        const source = {
+            map: {
+                present: {
+                    center: [20, 21],
+                    maxExtent: [0, 0, 0, 0],
+                    projection: 'EPSG:4326',
+                    units: 'meters',
+                    mapInfoControl: {},
+                    zoom: 10,
+                    mapOptions: {},
+                    layers: [],
+                    groups: [],
+                    backgrounds: [],
+                    text_search_config: undefined,
+                    bookmark_search_config: undefined
+                }
+            },
+            contextcreator: {
+                plugins: [{ name: 'Map' }],
+                customVariablesEnabled: true,
+                resource: {
+                    id: 1,
+                    name: 'Map',
+                    tags: [{ id: '1' }]
+                }
+            }
+        };
+        const generatedSource = generateContextResource(source);
+        expect(generatedSource.metadata.name).toBe('Map');
+        expect(generatedSource.tags).toBeFalsy();
     });
 });

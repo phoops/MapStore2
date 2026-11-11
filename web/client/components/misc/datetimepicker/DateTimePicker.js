@@ -108,7 +108,7 @@ class DateTimePicker extends Component {
         if (prevProps.value !== this.props.value || prevProps.operator !== this.props.operator) {
             const { value, operator } = this.props;
             this.setDateFromValueProp(value, operator);
-            if (this.props.operator === 'isNull') this.setState({ inputValue: '', date: null });
+            if (this.props.operator === 'isNull') this.setState({ inputValue: '', date: null });  // eslint-disable-line -- TODO: need to be fixed
         }
     }
 
@@ -149,7 +149,7 @@ class DateTimePicker extends Component {
                             onMouseDown={this.handleMouseDown}
                             onChange={this.handleCalendarChange}
                             {...props}
-                            value={!isNil(calendarVal) ? new Date(calendarVal) : undefined}
+                            value={!isNil(calendarVal) && !isNaN(new Date(calendarVal).getTime()) ? new Date(calendarVal) : null}
                         />
                         <div>
                             <div className="date-time-hour-input">
@@ -271,7 +271,7 @@ class DateTimePicker extends Component {
                                         onMouseDown={this.handleMouseDown}
                                         onChange={this.handleCalendarChange}
                                         {...props}
-                                        value={!isNil(calendarVal) ? new Date(calendarVal) : undefined}
+                                        value={!isNil(calendarVal) && !isNaN(new Date(calendarVal).getTime()) ? new Date(calendarVal) : null}
                                     />
                                     {this.renderQuickTimeSelectors()}
                                 </div>

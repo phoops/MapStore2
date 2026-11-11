@@ -12,9 +12,11 @@ import {
     resolveAttributeTemplate,
     geoStylerStyleFilter,
     drawWellKnownNameImageFromSymbolizer,
-    drawIcons,
-    parseSymbolizerExpressions
+    parseSymbolizerExpressions,
+    getCachedImageById
 } from './StyleParserUtils';
+import { drawIcons } from './IconUtils';
+
 import { geometryFunctionsLibrary } from './GeometryFunctionsUtils';
 import { circleToPolygon } from '../DrawGeometryUtils';
 
@@ -70,7 +72,7 @@ const anchorToLabelAlign = (anchor) => {
     }
 };
 
-const symbolizerToPrintMSStyle = (symbolizer, feature, layer) => {
+const symbolizerToPrintMSStyle = (symbolizer, feature, layer, originalSymbolizer) => {
     const globalOpacity = layer.opacity === undefined ? 1 : layer.opacity;
     if (symbolizer.kind === 'Mark') {
         const { width, height, canvas }  = drawWellKnownNameImageFromSymbolizer(symbolizer);
@@ -85,7 +87,7 @@ const symbolizerToPrintMSStyle = (symbolizer, feature, layer) => {
         };
     }
     if (symbolizer.kind === 'Icon') {
-        const { width = symbolizer.size, height = symbolizer.size }  = drawWellKnownNameImageFromSymbolizer(symbolizer);
+        const { width = symbolizer.size, height = symbolizer.size }  = getCachedImageById(originalSymbolizer);
         const aspect = width / height;
         let iconSizeW = symbolizer.size;
         let iconSizeH = iconSizeW / aspect;
@@ -119,15 +121,13 @@ const symbolizerToPrintMSStyle = (symbolizer, feature, layer) => {
             fontColor: symbolizer.color,
             fontOpacity: 1 * globalOpacity,
             label: resolveAttributeTemplate(feature, symbolizer.label, ''),
-            // does not work
-            // the halo color cover the text
-            /*
+            // Halo information
             ...(symbolizer.haloWidth > 0 && {
                 labelOutlineColor: symbolizer.haloColor,
                 labelOutlineOpacity: 1 * globalOpacity,
-                labelOutlineWidth: symbolizer.haloWidth
+                labelOutlineWidth: symbolizer.haloWidth,
+                labelOutlineMode: 'halo'
             }),
-            */
             // hide default point
             fillOpacity: 0,
             pointRadius: 0,
@@ -207,11 +207,12 @@ export const getPrintStyleFuncFromRules = (geoStylerStyle) => {
                                 : true)
                         )
                     );
+                    const originalSymbolizer = circleGeometrySymbolizers[circleGeometrySymbolizers.length - 1]
+                    || pointGeometrySymbolizers[pointGeometrySymbolizers.length - 1]
+                    || polylineGeometrySymbolizers[polylineGeometrySymbolizers.length - 1]
+                    || polygonGeometrySymbolizers[polygonGeometrySymbolizers.length - 1];
 
-                    const symbolizer = parseSymbolizerExpressions(circleGeometrySymbolizers[circleGeometrySymbolizers.length - 1]
-                        || pointGeometrySymbolizers[pointGeometrySymbolizers.length - 1]
-                        || polylineGeometrySymbolizers[polylineGeometrySymbolizers.length - 1]
-                        || polygonGeometrySymbolizers[polygonGeometrySymbolizers.length - 1], feature);
+                    const symbolizer = parseSymbolizerExpressions(originalSymbolizer, feature);
 
                     let geometry = feature.geometry;
                     const geometryFunction = getGeometryFunction(symbolizer);
@@ -233,7 +234,7 @@ export const getPrintStyleFuncFromRules = (geoStylerStyle) => {
                             geometry,
                             properties: {
                                 ...feature?.properties,
-                                ms_style: symbolizerToPrintMSStyle(symbolizer, feature, layer)
+                                ms_style: symbolizerToPrintMSStyle(symbolizer, feature, layer, originalSymbolizer)
                             }
                         },
                         ...additionalPointSymbolizers.map((_additionalSymbolizer) => {
@@ -250,7 +251,7 @@ export const getPrintStyleFuncFromRules = (geoStylerStyle) => {
                                         },
                                         properties: {
                                             ...feature?.properties,
-                                            ms_style: symbolizerToPrintMSStyle(additionalSymbolizer, feature, layer)
+                                            ms_style: symbolizerToPrintMSStyle(additionalSymbolizer, feature, layer, _additionalSymbolizer)
                                         }
                                     };
                                 }

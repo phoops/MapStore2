@@ -84,6 +84,8 @@ export default ({
 
     const tileSelectOptions = getTileSizeSelectOptions(tileSizeOptions);
     const serverTypeOptions = getServerTypeOptions();
+    // for CSW services with no vendor options, disable format and info format options
+    const canLoadInfo = !(['csw'].includes(service.type) && service.layerOptions?.serverType === ServerTypes.NO_VENDOR);
     return (<CommonAdvancedSettings {...props} onChangeServiceProperty={onChangeServiceProperty} service={service} >
         {(isLocalizedLayerStylesEnabled && !isNil(service.type) ? service.type === "wms" : false) && (<FormGroup controlId="localized-styles" key="localized-styles">
             <Checkbox data-qa="service-lacalized-layer-styles-option"
@@ -104,13 +106,6 @@ export default ({
                 onChange={(e) => onChangeServiceProperty("layerOptions", { ...service.layerOptions, singleTile: e.target.checked })}
                 checked={!isNil(service?.layerOptions?.singleTile) ? service.layerOptions.singleTile : false}>
                 <Message msgId="layerProperties.singleTile" />&nbsp;<InfoPopover text={<Message msgId="catalog.singleTile.tooltip" />} />
-            </Checkbox>
-        </FormGroup>}
-        {!isNil(service.type) && service.type === "wms" && <FormGroup controlId="allowUnsecureLayers" key="allowUnsecureLayers">
-            <Checkbox
-                onChange={(e) => onChangeServiceProperty("allowUnsecureLayers", e.target.checked)}
-                checked={!isNil(service.allowUnsecureLayers) ? service.allowUnsecureLayers : false}>
-                <Message msgId="catalog.allowUnsecureLayers.label" />&nbsp;<InfoPopover text={<Message msgId="catalog.allowUnsecureLayers.tooltip" />} />
             </Checkbox>
         </FormGroup>}
         {(!isNil(service.type) ? (service.type === "csw" && !service.excludeShowTemplate) : false) && (<FormGroup controlId="metadata-template" key="metadata-template" className="metadata-template-editor">
@@ -160,9 +155,20 @@ export default ({
                 <Select
                     value={service.layerOptions?.serverType}
                     options={serverTypeOptions}
-                    onChange={event => onChangeServiceProperty("layerOptions", { ...service.layerOptions, serverType: event?.value })} />
+                    onChange={event => {
+                        if (event?.value === ServerTypes.NO_VENDOR) onChangeServiceProperty("layerOptions", { ...service.layerOptions, enableInteractiveLegend: undefined});
+                        onChangeServiceProperty("layerOptions", { ...service.layerOptions, serverType: event?.value });
+                    }} />
             </InputGroup>
         </FormGroup>
+        {![ServerTypes.NO_VENDOR].includes(service.layerOptions?.serverType) && ['wms', 'csw'].includes(service.type) && <FormGroup controlId="enableInteractiveLegend" key="enableInteractiveLegend">
+            <Checkbox data-qa="display-interactive-legend-option"
+                onChange={(e) => onChangeServiceProperty("layerOptions", { ...service.layerOptions, enableInteractiveLegend: e.target.checked})}
+                checked={!isNil(service.layerOptions?.enableInteractiveLegend) ? service.layerOptions?.enableInteractiveLegend : false}>
+                <Message msgId="layerProperties.enableInteractiveLegendInfo.label" />
+                &nbsp;<InfoPopover text={<Message msgId="layerProperties.enableInteractiveLegendInfo.info" />} />
+            </Checkbox>
+        </FormGroup>}
         {![ServerTypes.NO_VENDOR].includes(service.layerOptions?.serverType) && service.type === "wms" &&  <FormGroup controlId="useCacheOption" key="useCacheOption">
             <Checkbox data-qa="display-interactive-legend-option"
                 onChange={(e) => onChangeServiceProperty("layerOptions", { ...service.layerOptions, remoteTileGrids: e.target.checked})}
@@ -182,9 +188,10 @@ export default ({
                     title={<Message msgId="errorTitleDefault"/>}
                     text={<Message msgId="layerProperties.formatError" />} /> : null}
                 <Button
-                    disabled={props.formatsLoading || service.layerOptions?.serverType === ServerTypes.NO_VENDOR}
+                    disabled={props.formatsLoading || !canLoadInfo
+                    }
                     tooltipId="catalog.format.refresh"
-                    className="square-button-md no-border"
+                    className="square-button no-border"
                     onClick={() => onFormatOptionsFetch(service.url, true)}
                     key="format-refresh">
                     <Glyphicon glyph="refresh" />
@@ -195,7 +202,7 @@ export default ({
             <ControlLabel><Message msgId="layerProperties.format.tile" /></ControlLabel>
             <InputGroup>
                 <Select
-                    disabled={service.layerOptions?.serverType === ServerTypes.NO_VENDOR}
+                    disabled={!canLoadInfo}
                     isLoading={props.formatsLoading}
                     onOpen={() => onFormatOptionsFetch(service.url)}
                     value={service && service.format}
@@ -210,7 +217,7 @@ export default ({
             <ControlLabel><Message msgId="layerProperties.format.information" /></ControlLabel>
             <InputGroup>
                 <Select
-                    disabled={service.layerOptions?.serverType === ServerTypes.NO_VENDOR}
+                    disabled={!canLoadInfo}
                     isLoading={props.formatsLoading}
                     onOpen={() => onFormatOptionsFetch(service.url)}
                     value={service && service.infoFormat}

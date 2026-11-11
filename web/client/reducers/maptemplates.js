@@ -10,11 +10,30 @@ import { CLEAR_MAP_TEMPLATES, SET_TEMPLATES, TOGGLE_FAVOURITE_TEMPLATE, SET_TEMP
     SET_MAP_TEMPLATES_LOADED, SET_ALLOWED_TEMPLATES } from "../actions/maptemplates";
 import { get } from 'lodash';
 import { set } from '../utils/ImmutableUtils';
+import { MAP_CONFIG_LOADED } from "../actions/config";
 
 export default (state = {}, action) => {
     switch (action.type) {
     case CLEAR_MAP_TEMPLATES: {
         return {};
+    }
+    case MAP_CONFIG_LOADED: {
+        // NOTE: This is a dynamic reducer plugin that only functions when the map template plugin is active.
+        // It does not run during the initial LOAD_MAP_CONFIG phase.
+        //
+        // This reducer is triggered in two specific scenarios:
+        //   CASE 1: When the session is cleared to restore the original templates.
+        //   CASE 2: When map templates are replaced — in this case, mapTemplates is not provided,
+        //           so the current list should be preserved instead of being overwritten.
+        //   Case 3: When adding templates, comes well prepared map templates(overridden - original + from user session )
+        // Clarification:
+        //   The initial setup of map templates is handled by the `setSessionToDynamicReducers`
+        //   function in the userSession epic. The MAP_CONFIG_LOADED action does *not* initialize map templates on load.
+        const mapTemplates = action.config?.mapTemplates;
+        if (mapTemplates === undefined || (Array.isArray(mapTemplates) && mapTemplates.length === 0)) {
+            return state;
+        }
+        return set('templates', mapTemplates, state);
     }
     case SET_TEMPLATES: {
         return set('templates', action.templates, state);

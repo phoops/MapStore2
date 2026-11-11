@@ -8,50 +8,21 @@
 
 import Layers from '../../../../utils/openlayers/Layers';
 import { ServerTypes } from '../../../../utils/LayersUtils';
-
+import isEqual from 'lodash/isEqual';
 
 import {getStyle} from '../VectorStyle';
 import VectorSource from 'ol/source/Vector';
 import VectorLayer from 'ol/layer/Vector';
 import {bbox, all, tile} from 'ol/loadingstrategy.js';
+import { createXYZ } from 'ol/tilegrid.js';
 
 import GeoJSON from 'ol/format/GeoJSON';
 
 import { getFeature, getFeatureLayer } from '../../../../api/WFS';
 import { optionsToVendorParams } from '../../../../utils/VendorParamsUtils';
-import { getCredentials } from '../../../../utils/SecurityUtils';
-import { needsReload } from '../../../../utils/WFSLayerUtils';
+import { needsReload, needsCredentials, getConfig } from '../../../../utils/WFSLayerUtils';
 import { applyDefaultStyleToVectorLayer } from '../../../../utils/StyleUtils';
-const needsCredentials = (options) => {
-    const security = options?.security || {};
-    const {type, sourceId} = security;
-    const {username, password} = getCredentials(sourceId) ?? {};
-    return type?.toLowerCase?.() === "basic" && (!username || !password);
-};
-const getConfig = (options) => {
-    const security = options?.security || {};
-    const config = {};
-    const {type, sourceId} = security;
-    const credentials = getCredentials(sourceId);
-    if (credentials) {
-        const {username, password} = credentials;
-        switch (type?.toLowerCase?.()) {
-        case "basic":
-            config.headers = {
-                Authorization: `Basic ${btoa(`${username}:${password}`)}`
-            };
-            break;
-        case "bearer":
-            config.headers = {
-                Authorization: `Bearer ${credentials.token}`
-            };
-            break;
-        default:
-            break;
-        }
-    }
-    return config;
-};
+
 const createLoader = (source, options) => (extent, resolution, projection) => {
     let proj = projection.getCode();
     let req;
@@ -65,7 +36,7 @@ const createLoader = (source, options) => (extent, resolution, projection) => {
         if (needsCredentials(options)) {
             req = new Promise((resolve, reject) => {reject();});
         } else {
-            if (options?.strategy === 'bbox') {
+            if (options?.strategy === 'bbox' || options?.strategy === 'tile') {
             // here bbox filter is
                 const [left, bottom, right, top] = extent;
 
@@ -134,14 +105,16 @@ const getWFSStyle = (layer, options, map) => {
         });
 };
 const getStrategy = (options) => {
-    if (options.strategy === 'bbox') {
+    if (options.strategy === 'bbox' && options?.serverType === ServerTypes.NO_VENDOR) {
         return bbox;
     }
     if (options.strategy === 'all') {
         return all;
     }
-    if (options.strategy === 'tile') {
-        return tile;
+    if (options.strategy === 'tile' && options?.serverType === ServerTypes.NO_VENDOR) {
+        return tile(createXYZ({
+            tileSize: options?.tileSize || 512
+        }));
     }
     return null;
 };
@@ -197,7 +170,10 @@ Layers.registerType('wfs', {
                 f.getGeometry().transform(oldCrs, newCrs);
             });
         }
-        if (needsReload(oldOptions, options)) {
+        if (needsReload(oldOptions, options)
+            || !isEqual(oldOptions.security, options.security)
+            || !isEqual(oldOptions.requestRuleRefreshHash, options.requestRuleRefreshHash)
+        ) {
             source.setLoader(createLoader(source, options));
             source.clear();
             source.refresh();

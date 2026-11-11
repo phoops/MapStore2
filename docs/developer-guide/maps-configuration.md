@@ -34,7 +34,6 @@ This page uses the `new.json` file as a template configuration to start creating
 You can edit `new.json` to customize this initial template. It typically contains the map backgrounds you want to use for all the new maps (identified by the special property `"group": "background"`).
 
 If you have enabled the datadir, then you can externalize the new.json or config.json files. (see [here](externalized-configuration.md#externalized-configuration) for more details)
-If you have enabled the datadir, then you can externalize the new.json or config.json files. (see [here](externalized-configuration.md#externalized-configuration) for more details)
 
 `new.json` and `config.json` are special cases, but you can configure your own static map context creating these json files in the root of the project, for instance `mycontext.json` and accessing them at the URL:
 
@@ -202,7 +201,6 @@ In the case of the background the `thumbURL` is used to show a preview of the la
 - `osm`: OpenStreetMap layers format
 - `tileprovider`: Some other mixed specific tile providers
 - `wmts`: WMTS: Web Map Tile Service layers
-- `bing`: Bing Maps layers
 - `google`: Google Maps layers
 - `mapquest`: MapQuest layers
 - `graticule`: Vector layer that shows a coordinates grid over the map, with optional labels
@@ -211,6 +209,7 @@ In the case of the background the `thumbURL` is used to show a preview of the la
 - `terrain`: layers that define the elevation profile of the terrain
 - `cog`: Cloud Optimized GeoTIFF layers
 - `model`: 3D model layers like: IFC
+- `flatgeobuf`: FlatGeobuf vector layers
 
 #### WMS
 
@@ -248,6 +247,8 @@ Details:
 - `search`: an object to configure the search features service. It is used to link a WFS service, typically with this shape: `{url: 'http://some.wfs.service', type: 'wfs'}`.
 - `fields`: if the layer has a wfs service configured, this can contain the fields (attributes) of the features, with custom configuration (e.g. aliases, types, etc.). See [Fields](#fields) for details.
 - `credits`: includes the information to show in attribution.(`imageUrl`, `link`, `title`).
+- `singleTile`: By default, WMS is invoked using tiled requests. If you want to use a single tile request, you can set this property to `true`.
+- `tileSize`: defines the size of the tiles in pixels for tiled requests. It is a number and it can be `256` or `512`. Default is `256`.
 
 ##### Fields
 
@@ -307,12 +308,6 @@ Some other feature will break, for example the layer properties will stop workin
     "https://d.maps.geosolutionsgroup.com/geoserver/wms",
     "https://e.maps.geosolutionsgroup.com/geoserver/wms",
     "https://f.maps.geosolutionsgroup.com/geoserver/wms"
-    "https://a.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://b.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://c.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://d.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://e.maps.geosolutionsgroup.com/geoserver/wms",
-    "https://f.maps.geosolutionsgroup.com/geoserver/wms"
   ],
   "visibility": true,
   "opacity": 1,
@@ -350,9 +345,7 @@ in `localConfig.json`
     "cfg": {
         "additionalLayers": [{
             "url": "http...",
-            "url": "http...",
             "format": "application/bil16",
-            "type": "wms",
             "type": "wms",
             ...
             "name": "elevation",
@@ -714,10 +707,6 @@ e.g. (embed tileMatrixSet without link to sources)
     ]
   }
 ```
-
-#### Bing
-
-TODO
 
 #### Google
 
@@ -1127,23 +1116,18 @@ Mapstore supports 3 different types of [terrain providers](https://cesium.com/le
 
 If no `terrain` layer is defined the default elevation profile for the globe will be the [ellipsoid](https://cesium.com/learn/cesiumjs/ref-doc/EllipsoidTerrainProvider.html), that is the 3rd type, that provides a rather flat profile.
 
-In order to use these layers with all the maps, they need to be incorporated into the `additionalLayers` configuration of the `Map` plugin (in `localConfig.json` and/or in the context configuration).
+In order to use these layers with all the maps, they need to be incorporated into the `new.json` default map configuration inside the `background` group similar to background layers (note that the BackgroundSelector plugin allows to register additional terrains from the UI).
 The globe accepts **only one** terrain provider so in case of adding more than one the last one will take precedence to be used to create the elevation profile.
 
 ```json
 {
-    "name": "Map",
-    "cfg": {
-        "additionalLayers": [{
-            "type": "terrain",
-            "provider": "wms",
-            "url": "https://host-sample/geoserver/wms",
-            "name": "workspace:layername",  // name of the geoserver resource
-            "littleEndian": false,
-            "visibility": true,
-            "crs": "CRS:84"
-        }]
-    }
+  "type": "terrain",
+  "provider": "wms",
+  "url": "https://host-sample/geoserver/wms",
+  "name": "workspace:layername",  // name of the geoserver resource
+  "littleEndian": false,
+  "visibility": true,
+  "crs": "CRS:84"
 }
 ```
 
@@ -1153,7 +1137,7 @@ In order to create a `wms` based mesh there are some requirements that need to b
 
 - A GeoServer WMS service with the [DDS/BIL plugin](https://docs.geoserver.org/stable/en/user/community/dds/index.html)
 - The Layer to use for the terrain model have to be configured in GeoServer with **BIL 16 bit** output, **big endian mode**, **-9999 as no-data value**
-- A **layer** of `"type": "terrain"` configured in MapStore (map or `additionalLayers`) that uses the `"provider": "wms"` .
+- A **layer** of `"type": "terrain"` configured in MapStore that uses the `"provider": "wms"` .
 
 The **layer** configuration can be done in 3 different ways:
 
@@ -1239,6 +1223,24 @@ The `terrain` layer of `cesium` type allows using Cesium terrain format complian
 }
 ```
 
+##### Cesium Ion terrain provider
+
+The `terrain` layer of the `cesium-ion` type enables the use of Cesium Ion terrain format-compliant services (i.e., Cesium Ion resources). The options attribute allows for the configuration and access of Ion resources and their associated assets.
+
+```json
+{
+  "type": "terrain",
+  "provider": "cesium-ion",
+  "visibility": true,
+  "options": {
+    "assetId": "", // cesium ion asset id to be requested (mandatory)
+    "accessToken": "", // cesium access token to be used (mandatory)
+    "server": undefined, // resource from the Cesium ion API server. Defaults to https://api.cesium.com when unspecified
+    "credit": "" // optional, additional credit to be displayed along side credit and attribution from ion resource
+  }
+}
+```
+
 #### Elevation
 
 This layer provides information related to elevation based on a provided DTM layer. **It does not provide the terrain profile for 3D visualization**, see [terrain](#terrain) layer type for this feature.
@@ -1311,6 +1313,62 @@ i.e.
         },
         "format": "openlayers",
     }
+}
+```
+
+#### ArcGIS MapServer layer
+
+This layer type allows to render an ArcGIS MapServer layer.
+
+An ArcGIS MapServer source is a composition of different layers to create a map. The layer is identified by the `arcgis` type, containing `url` and `options.layers` properties . e.g.
+
+```json
+{
+    "type": "arcgis",
+    "url": "https://arcgis-example/rest/services/MyService/MapServer",
+    "options": {
+      "layers": [{ "id": 0 }, { "id": 1 }]
+    },
+    "title": "Title",
+    "group": "",
+    "visibility": true
+}
+```
+
+Where:
+
+- `url` is the URL of the MapServer source.
+- `options.layers` is the list of object containing the ids of the layers. Required to support `queriable` option and legend support.
+- `name` (optional). When present, the MapStore layer will show only the layer with the id specified in the `name` attribute. e.g.
+
+```json
+{
+    "type": "arcgis",
+    "name": "0",
+    "url": "https://arcgis-example/rest/services/MyService/MapServer"
+    "url": "https://arcgis-example/rest/services/MyService/MapServer",
+    "options": {
+      "layers": [{ "id": 0 }, { "id": 1 }]
+    },
+    "title": "Title",
+    "group": "",
+    "visibility": true,
+    "queriable": true
+}
+```
+
+#### FlatGeobuf(FGB) layer
+
+This type of layer shows vector file in FlatGeobuf format also inside the Cesium viewer.
+See format specifications for more info about FlatGeobuf [here](https://flatgeobuf.org/).
+
+```javascript
+{
+    "type": "flatgeobuf",
+    "url": "https://host-sample/countries.fgb",    
+    "title": "Title",
+    "group": "",
+    "visibility": true
 }
 ```
 
@@ -1467,7 +1525,6 @@ Openlayers:
 Cesium:
 
 - `tileDiscardPolicy` sets a policy for discarding (missing/broken) tiles ([https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html](https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html)). If it is not specified the NeverTileDiscardPolicy will be used. If "none" is specified, no policy at all will be set.
-- `tileDiscardPolicy` sets a policy for discarding (missing/broken) tiles ([https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html](https://cesium.com/learn/cesiumjs/ref-doc/TileDiscardPolicy.html)). If it is not specified the NeverTileDiscardPolicy will be used. If "none" is specified, no policy at all will be set.
 
 MapStore specific:
 
@@ -1611,6 +1668,12 @@ Example:
             "clippingPolygonFeatureId": "feature.id.01",
             "clippingPolygonUnion": false
           }
+        ],
+        "groups": [
+          {
+            "id": "group_01",
+            "visibility": true
+          }
         ]
       }
     ],
@@ -1677,6 +1740,7 @@ View configuration object
 | globeTranslucency.nearDistance | number | when `fadeByDistance` is true it indicates the minimum distance to apply translucency |
 | globeTranslucency.farDistance | number |  when `fadeByDistance` is true it indicates the maximum distance to apply translucency |
 | layers | array | array of layer configuration overrides, default properties override `visibility` and `opacity` |
+| groups | array | array of group configuration overrides, default property overrides `visibility` |
 
 Resource object configuration
 

@@ -45,14 +45,14 @@ describe('test Layer Properties Display module component', () => {
         // wrap in a stateful component, stateless components render return null
         // see: https://facebook.github.io/react/docs/top-level-api.html#reactdom.render
         const comp = ReactDOM.render(<Display element={l} settings={settings} />, document.getElementById("container"));
-        expect(comp).toExist();
+        expect(comp).toBeTruthy();
         const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
-        expect(inputs).toExist();
+        expect(inputs).toBeTruthy();
         expect(inputs.length).toBe(5);
         ReactTestUtils.Simulate.focus(inputs[0]);
         expect(inputs[0].value).toBe('100');
     });
-    it('tests Display component for wms', () => {
+    it('tests Display component for wms for map viewer', () => {
         const l = {
             name: 'layer00',
             title: 'Layer',
@@ -71,9 +71,37 @@ describe('test Layer Properties Display module component', () => {
         // wrap in a stateful component, stateless components render return null
         // see: https://facebook.github.io/react/docs/top-level-api.html#reactdom.render
         const comp = ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
-        expect(comp).toExist();
+        expect(comp).toBeTruthy();
         const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
-        expect(inputs).toExist();
+        expect(inputs).toBeTruthy();
+        expect(inputs.length).toBe(14);
+        ReactTestUtils.Simulate.focus(inputs[2]);
+        expect(inputs[2].value).toBe('70');
+        inputs[8].click();
+        expect(spy.calls.length).toBe(1);
+    });
+    it('tests Display component for wms for dashboard or geostory', () => {
+        const l = {
+            name: 'layer00',
+            title: 'Layer',
+            visibility: true,
+            storeIndex: 9,
+            type: 'wms',
+            url: 'fakeurl'
+        };
+        const settings = {
+            options: {opacity: 0.7}
+        };
+        const handlers = {
+            onChange() {}
+        };
+        let spy = expect.spyOn(handlers, "onChange");
+        // wrap in a stateful component, stateless components render return null
+        // see: https://facebook.github.io/react/docs/top-level-api.html#reactdom.render
+        const comp = ReactDOM.render(<Display element={l} hideInteractiveLegendOption settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
+        expect(comp).toBeTruthy();
+        const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
+        expect(inputs).toBeTruthy();
         expect(inputs.length).toBe(13);
         ReactTestUtils.Simulate.focus(inputs[2]);
         expect(inputs[2].value).toBe('70');
@@ -109,7 +137,7 @@ describe('test Layer Properties Display module component', () => {
         };
 
         const comp = ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
-        expect(comp).toExist();
+        expect(comp).toBeTruthy();
         const formatRefresh = ReactTestUtils.scryRenderedDOMComponentsWithClass( comp, "format-refresh" );
         ReactTestUtils.Simulate.click(formatRefresh[0]);
     });
@@ -165,69 +193,11 @@ describe('test Layer Properties Display module component', () => {
         };
         ReactDOM.render(<Display isLocalizedLayerStylesEnabled element={l} settings={settings}/>, document.getElementById("container"));
         const isLocalizedLayerStylesOption = document.querySelector('[data-qa="display-lacalized-layer-styles-option"]');
-        expect(isLocalizedLayerStylesOption).toExist();
+        expect(isLocalizedLayerStylesOption).toBeTruthy();
     });
 
-    it('tests Display component for wms with force proxy option displayed', () => {
-        const l = {
-            name: 'layer00',
-            title: 'Layer',
-            visibility: true,
-            storeIndex: 9,
-            type: 'wms',
-            url: 'fakeurl',
-            forceProxy: true
-        };
-        const settings = {
-            options: {opacity: 0.7}
-        };
-        ReactDOM.render(<Display element={l} settings={settings}/>, document.getElementById("container"));
-        const isForceProxyOption = document.querySelector('[data-qa="display-forceProxy-option"]');
-        expect(isForceProxyOption).toBeTruthy();
-    });
-    it('tests Display component for wms with force proxy option in cesium map', () => {
-        const l = {
-            name: 'layer00',
-            title: 'Layer',
-            visibility: true,
-            storeIndex: 9,
-            type: 'wms',
-            url: 'fakeurl',
-            forceProxy: true
-        };
-        const settings = {
-            options: {opacity: 0.7}
-        };
-        ReactDOM.render(<Display isCesiumActive element={l} settings={settings}/>, document.getElementById("container"));
-        const isForceProxyOption = document.querySelector('[data-qa="display-forceProxy-option"]');
-        expect(isForceProxyOption).toBeFalsy();
-    });
-    it('tests Display component for wms with force proxy option onChange', () => {
-        const handlers = {
-            onChange() {}
-        };
-        const spyOn = expect.spyOn(handlers, 'onChange');
-        const l = {
-            name: 'layer00',
-            title: 'Layer',
-            visibility: true,
-            storeIndex: 9,
-            type: 'wms',
-            url: 'fakeurl',
-            forceProxy: false
-        };
-        const settings = {
-            options: {opacity: 0.7}
-        };
-        ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
-        const isForceProxyOption = document.querySelector('[data-qa="display-forceProxy-option"]');
-        expect(isForceProxyOption).toBeTruthy();
-        ReactTestUtils.Simulate.change(isForceProxyOption, { "target": { "checked": true }});
-        expect(spyOn).toHaveBeenCalled();
-        expect(spyOn.calls[0].arguments).toEqual([ 'forceProxy', true ]);
-    });
 
-    it('tests Layer Properties Legend component', () => {
+    it('tests Layer Properties Legend component for map viewer only', () => {
         const l = {
             name: 'layer00',
             title: 'Layer',
@@ -243,7 +213,37 @@ describe('test Layer Properties Display module component', () => {
             onChange() {}
         };
         const comp = ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
-        expect(comp).toExist();
+        expect(comp).toBeTruthy();
+        const labels = ReactTestUtils.scryRenderedDOMComponentsWithClass( comp, "control-label" );
+        const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
+        const legendWidth = inputs[12];
+        const legendHeight = inputs[13];
+        // Default legend values
+        expect(legendWidth.value).toBe('12');
+        expect(legendHeight.value).toBe('12');
+        expect(labels.length).toBe(8);
+        expect(labels[4].innerText).toBe("layerProperties.legendOptions.title");
+        expect(labels[5].innerText).toBe("layerProperties.legendOptions.legendWidth");
+        expect(labels[6].innerText).toBe("layerProperties.legendOptions.legendHeight");
+        expect(labels[7].innerText).toBe("layerProperties.legendOptions.legendPreview");
+    });
+    it('tests Layer Properties Legend component for dashboard or geostory', () => {
+        const l = {
+            name: 'layer00',
+            title: 'Layer',
+            visibility: true,
+            storeIndex: 9,
+            type: 'wms',
+            url: 'fakeurl'
+        };
+        const settings = {
+            options: {opacity: 1}
+        };
+        const handlers = {
+            onChange() {}
+        };
+        const comp = ReactDOM.render(<Display element={l} hideInteractiveLegendOption settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
+        expect(comp).toBeTruthy();
         const labels = ReactTestUtils.scryRenderedDOMComponentsWithClass( comp, "control-label" );
         const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
         const legendWidth = inputs[11];
@@ -257,8 +257,7 @@ describe('test Layer Properties Display module component', () => {
         expect(labels[6].innerText).toBe("layerProperties.legendOptions.legendHeight");
         expect(labels[7].innerText).toBe("layerProperties.legendOptions.legendPreview");
     });
-
-    it('tests Layer Properties Legend component events', () => {
+    it('tests wms Layer Properties Legend component events', () => {
         const l = {
             name: 'layer00',
             title: 'Layer',
@@ -269,7 +268,8 @@ describe('test Layer Properties Display module component', () => {
             legendOptions: {
                 legendWidth: 15,
                 legendHeight: 15
-            }
+            },
+            enableInteractiveLegend: false
         };
         const settings = {
             options: {
@@ -281,14 +281,15 @@ describe('test Layer Properties Display module component', () => {
         };
         let spy = expect.spyOn(handlers, "onChange");
         const comp = ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
-        expect(comp).toExist();
+        expect(comp).toBeTruthy();
         const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
         const legendPreview = ReactTestUtils.scryRenderedDOMComponentsWithClass( comp, "legend-preview" );
-        expect(legendPreview).toExist();
-        expect(inputs).toExist();
-        expect(inputs.length).toBe(13);
-        let legendWidth = inputs[11];
-        let legendHeight = inputs[12];
+        expect(legendPreview).toBeTruthy();
+        expect(inputs).toBeTruthy();
+        expect(inputs.length).toBe(14);
+        let interactiveLegendConfig = inputs[10];
+        let legendWidth = inputs[12];
+        let legendHeight = inputs[13];
         const img = ReactTestUtils.scryRenderedDOMComponentsWithTag(comp, 'img');
 
         // Check value in img src
@@ -329,6 +330,12 @@ describe('test Layer Properties Display module component', () => {
         expect(params.get("width")).toBe('12');
         expect(params.get("height")).toBe('12');
 
+        // change enableInteractiveLegend to enable interactive legend
+        interactiveLegendConfig.checked = true;
+        ReactTestUtils.Simulate.change(interactiveLegendConfig);
+        expect(spy).toHaveBeenCalled();
+        expect(spy.calls[4].arguments[0]).toEqual("enableInteractiveLegend");
+        expect(spy.calls[4].arguments[1]).toEqual(true);
     });
 
     it("tests Layer Properties Legend component with values from layers", () => {
@@ -350,11 +357,220 @@ describe('test Layer Properties Display module component', () => {
             }
         };
         const comp = ReactDOM.render(<Display element={l} settings={settings}/>, document.getElementById("container"));
-        expect(comp).toExist();
+        expect(comp).toBeTruthy();
         const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
-        expect(inputs).toExist();
-        expect(inputs.length).toBe(13);
-        expect(inputs[11].value).toBe("20");
-        expect(inputs[12].value).toBe("40");
+        expect(inputs).toBeTruthy();
+        expect(inputs.length).toBe(14);
+        expect(inputs[12].value).toBe("20");
+        expect(inputs[13].value).toBe("40");
+    });
+    it('tests wfs Layer Properties Legend component events', () => {
+        const l = {
+            name: 'layer00',
+            title: 'Layer',
+            visibility: true,
+            storeIndex: 9,
+            type: 'wfs',
+            url: 'fakeurl',
+            legendOptions: {
+                legendWidth: 15,
+                legendHeight: 15
+            },
+            enableInteractiveLegend: false
+        };
+        const settings = {
+            options: {
+                opacity: 1
+            }
+        };
+        const handlers = {
+            onChange() {}
+        };
+        let spy = expect.spyOn(handlers, "onChange");
+        const comp = ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
+        expect(comp).toBeTruthy();
+        const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
+        const legendPreview = ReactTestUtils.scryRenderedDOMComponentsWithClass( comp, "legend-preview" );
+        expect(legendPreview).toBeTruthy();
+        expect(inputs).toBeTruthy();
+        expect(inputs.length).toBe(6);
+        let interactiveLegendConfig = document.querySelector(".legend-options input[data-qa='display-interactive-legend-option']");
+        // change enableInteractiveLegend to enable interactive legend
+        interactiveLegendConfig.checked = true;
+        ReactTestUtils.Simulate.change(interactiveLegendConfig);
+        expect(spy).toHaveBeenCalled();
+        expect(spy.calls[0].arguments[0]).toEqual("enableInteractiveLegend");
+        expect(spy.calls[0].arguments[1]).toEqual(true);
+    });
+    it('tests vector Layer Properties Legend component events', () => {
+        const l = {
+            name: 'layer00',
+            title: 'Layer',
+            visibility: true,
+            storeIndex: 9,
+            type: 'vector',
+            url: 'fakeurl',
+            legendOptions: {
+                legendWidth: 15,
+                legendHeight: 15
+            },
+            enableInteractiveLegend: false
+        };
+        const settings = {
+            options: {
+                opacity: 1
+            }
+        };
+        const handlers = {
+            onChange() {}
+        };
+        let spy = expect.spyOn(handlers, "onChange");
+        const comp = ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
+        expect(comp).toBeTruthy();
+        const inputs = ReactTestUtils.scryRenderedDOMComponentsWithTag( comp, "input" );
+        const legendPreview = ReactTestUtils.scryRenderedDOMComponentsWithClass( comp, "legend-preview" );
+        expect(legendPreview).toBeTruthy();
+        expect(inputs).toBeTruthy();
+        expect(inputs.length).toBe(6);
+        let interactiveLegendConfig = document.querySelector(".legend-options input[data-qa='display-interactive-legend-option']");
+        // change enableInteractiveLegend to enable interactive legend
+        interactiveLegendConfig.checked = true;
+        ReactTestUtils.Simulate.change(interactiveLegendConfig);
+        expect(spy).toHaveBeenCalled();
+        expect(spy.calls[0].arguments[0]).toEqual("enableInteractiveLegend");
+        expect(spy.calls[0].arguments[1]).toEqual(true);
+    });
+    it('tests default dynamic legend filter field with interactive legend active', () => {
+        const l = {
+            name: 'layer00',
+            title: 'Layer',
+            visibility: true,
+            storeIndex: 9,
+            type: 'wms',
+            url: 'fakeurl',
+            legendOptions: {
+                legendWidth: 15,
+                legendHeight: 15
+            },
+            enableInteractiveLegend: true
+        };
+        const settings = {
+            options: {
+                opacity: 1
+            }
+        };
+        const handlers = {
+            onChange() {}
+        };
+        const comp = ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
+        expect(comp).toBeTruthy();
+        let enableDynamicLegend = document.querySelector(".legend-options input[data-qa='display-dynamic-legend-filter']");
+        expect(enableDynamicLegend).toBeTruthy();
+        expect(enableDynamicLegend.checked).toBeTruthy();
+    });
+    it('tests hide dynamic legend filter field with interactive legend and hide interactive option', () => {
+        const l = {
+            name: 'layer00',
+            title: 'Layer',
+            visibility: true,
+            storeIndex: 9,
+            type: 'wms',
+            url: 'fakeurl',
+            legendOptions: {
+                legendWidth: 15,
+                legendHeight: 15
+            },
+            enableInteractiveLegend: true
+        };
+        const settings = {
+            options: {
+                opacity: 1
+            }
+        };
+        const handlers = {
+            onChange() {}
+        };
+        const comp = ReactDOM.render(<Display hideInteractiveLegendOption element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
+        expect(comp).toBeTruthy();
+        let enableDynamicLegend = document.querySelector(".legend-options input[data-qa='display-dynamic-legend-filter']");
+        let enableInteractiveLegend = document.querySelector(".legend-options input[data-qa='display-interactive-legend-option']");
+        expect(enableDynamicLegend).toBeFalsy();
+        expect(enableInteractiveLegend).toBeFalsy();
+    });
+    it('tests legend filter by viewport field', () => {
+        const l = {
+            name: 'layer00',
+            title: 'Layer',
+            visibility: true,
+            storeIndex: 9,
+            type: 'wms',
+            url: 'fakeurl',
+            legendOptions: {
+                legendWidth: 15,
+                legendHeight: 15
+            },
+            enableInteractiveLegend: false
+        };
+        const settings = {
+            options: {
+                opacity: 1
+            }
+        };
+        const handlers = {
+            onChange() {}
+        };
+        let spy = expect.spyOn(handlers, "onChange");
+        const comp = ReactDOM.render(<Display element={l} settings={settings} onChange={handlers.onChange}/>, document.getElementById("container"));
+        expect(comp).toBeTruthy();
+        let enableDynamicLegend = document.querySelector(".legend-options input[data-qa='display-dynamic-legend-filter']");
+        expect(enableDynamicLegend).toBeTruthy();
+        expect(enableDynamicLegend.checked).toBeFalsy();
+        enableDynamicLegend.checked = true;
+        ReactTestUtils.Simulate.change(enableDynamicLegend);
+        expect(spy).toHaveBeenCalled();
+        expect(spy.calls[0].arguments[0]).toEqual("enableDynamicLegend");
+        expect(spy.calls[0].arguments[1]).toEqual(true);
+    });
+
+    it('tests arcgis Layer Properties Legend component', () => {
+        const l = {
+            name: 'arcgisLayer',
+            title: 'ArcGIS Layer',
+            visibility: true,
+            storeIndex: 9,
+            type: 'arcgis',
+            url: '/rest/services/MapServer'
+        };
+        const settings = {
+            options: {
+                opacity: 1
+            }
+        };
+        const handlers = {
+            onChange() { }
+        };
+        let spy = expect.spyOn(handlers, "onChange");
+
+        const comp = ReactDOM.render(
+            <Display element={l} settings={settings} onChange={handlers.onChange} />,
+            document.getElementById("container")
+        );
+
+        expect(comp).toBeTruthy();
+
+        const legendOptions = document.querySelector('.legend-options');
+
+        expect(legendOptions).toBeTruthy();
+
+        const dynamicLegendCheckbox = document.querySelector(".legend-options input[data-qa='display-dynamic-legend-filter']");
+        expect(dynamicLegendCheckbox).toBeTruthy();
+        expect(dynamicLegendCheckbox.checked).toBeFalsy();
+
+        dynamicLegendCheckbox.checked = true;
+        ReactTestUtils.Simulate.change(dynamicLegendCheckbox);
+
+        expect(spy).toHaveBeenCalled();
+        expect(spy.calls[0].arguments[0]).toEqual("enableDynamicLegend");
+        expect(spy.calls[0].arguments[1]).toEqual(true);
     });
 });

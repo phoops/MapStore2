@@ -7,7 +7,6 @@
  */
 
 module.exports = {
-    BingLayer: require('./BingLayer'),
     Commons: require('./Commons'),
     GraticuleLayer: require('./GraticuleLayer'),
     GoogleLayer: require('./GoogleLayer'),
@@ -19,5 +18,6 @@ module.exports = {
     WMSLayer: require('./WMSLayer'),
     WMTSLayer: require('./WMTSLayer'),
     VectorLayer: require('./VectorLayer'),
-    ElevationLayer: require('./ElevationLayer')
+    ElevationLayer: require('./ElevationLayer'),
+    ArcGISLayer: require('./ArcGISLayer')
 };

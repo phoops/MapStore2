@@ -104,7 +104,7 @@ const MapCatalogPanel = ({
         description: map.description,
         tools: <Toolbar
             btnDefaultProps={{
-                className: 'square-button-md'
+                className: 'square-button'
             }}
             buttons={[{
                 glyph: 'trash',
@@ -127,7 +127,7 @@ const MapCatalogPanel = ({
             }, {
                 glyph: 'share-alt',
                 bsStyle: 'primary',
-                className: 'square-button-md',
+                className: 'square-button',
                 tooltipId: 'mapCatalog.tooltips.share',
                 onClick: (e) => {
                     e.stopPropagation();
@@ -172,7 +172,7 @@ export default compose(
             initialStreamDebounce: 300
         },
         scrollSpyOptions: {
-            querySelector: '.map-catalog-panel > .map-catalog > .ms2-border-layout-body',
+            querySelector: '.map-catalog-panel > .map-catalog > .ms2-border-layout-body > .ms2-border-layout-content',
             pageSize: 12
         },
         hasMore: ({items = [], total = 0}) => items.length < total

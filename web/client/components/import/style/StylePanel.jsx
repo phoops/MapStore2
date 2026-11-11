@@ -9,7 +9,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Grid, Row, Col, Alert, ButtonToolbar } from 'react-bootstrap';
-import { Promise } from 'es6-promise';
 
 import Message from '../../I18N/Message';
 import { getMessageById } from '../../../utils/LocaleUtils';
@@ -68,11 +67,9 @@ class StylePanel extends React.Component {
         overrideAnnotation: false,
         initialLayers: []
     };
-
     componentDidMount() {
-        this.setState({initialLayers: [...this.props.layers]});
+        this.setState({initialLayers: [...this.props.layers]}); // eslint-disable-line -- TODO: need to be fixed
     }
-
     getGeometryType = (geometry) => {
         if (geometry && geometry.type === 'GeometryCollection') {
             return geometry.geometries.reduce((previous, g) => {

@@ -7,18 +7,19 @@
  */
 
 import Layers from '../../../../utils/openlayers/Layers';
-
+import isEqual from 'lodash/isEqual';
 import castArray from 'lodash/castArray';
 import head from 'lodash/head';
 import last from 'lodash/last';
-
-
-import {addAuthenticationParameter} from '../../../../utils/SecurityUtils';
+import axios from '../../../../libs/ajax';
+import { proxySource } from '../../../../utils/openlayers/WMSUtils';
+import {addAuthenticationParameter, hasRequestConfigurationByUrl} from '../../../../utils/SecurityUtils';
 import * as WMTSUtils from '../../../../utils/WMTSUtils';
 import CoordinatesUtils from '../../../../utils/CoordinatesUtils';
 import MapUtils from '../../../../utils/MapUtils';
 import { isVectorFormat} from '../../../../utils/VectorTileUtils';
 import urlParser from 'url';
+import { isValidResponse } from '../../../../utils/WMSUtils';
 
 import { get, getTransform } from 'ol/proj';
 import { applyTransform, getIntersection } from 'ol/extent';
@@ -43,6 +44,22 @@ const OL_VECTOR_FORMATS = {
 function getWMSURLs(urls, requestEncoding) {
     return urls.map((url) => requestEncoding === 'REST' ? url : url.split("\?")[0]);
 }
+
+const tileLoadFunction = (options) => (image, src) => {
+    axios.get(src, {
+        _msAuthSourceId: options.security?.sourceId,
+        responseType: 'blob'
+    }).then(response => {
+        if (isValidResponse(response)) {
+            image.getImage().src = URL.createObjectURL(response.data);
+        } else {
+            image.getImage().src = null;
+            console.error("error: " + response.data);
+        }
+    }).catch(e => {
+        console.error(e);
+    });
+};
 
 const createLayer = options => {
     // options.urls is an alternative name of URL.
@@ -99,8 +116,8 @@ const createLayer = options => {
     // the extent has effect to the tile ranges
     // we should skip the extent if the layer does not provide bounding box
     let extent = layerExtent && getIntersection(layerExtent, projection.getExtent());
-    const queryParameters = {};
-    urls.forEach(url => addAuthenticationParameter(url, queryParameters, options.securityToken));
+    let queryParameters = options.params ? options.params : {};
+    queryParameters = addAuthenticationParameter(urls[0] || '', queryParameters, options.securityToken, options.security?.sourceId);
     const queryParametersString = urlParser.format({ query: { ...queryParameters } });
 
     // TODO: support tileSizes from  matrix
@@ -134,6 +151,10 @@ const createLayer = options => {
         }),
         wrapX: true
     };
+    if (hasRequestConfigurationByUrl(options.url, null, options.security?.sourceId)) {
+        wmtsOptions.urls = wmtsOptions.urls.map(url => proxySource(options.forceProxy, url));
+        wmtsOptions.tileLoadFunction = tileLoadFunction(options);
+    }
 
     const wmtsSource = new WMTS(wmtsOptions);
     const Layer = isVector ? VectorTileLayer : TileLayer;
@@ -165,7 +186,8 @@ const updateLayer = (layer, newOptions, oldOptions) => {
     || oldOptions.srs !== newOptions.srs
     || oldOptions.format !== newOptions.format
     || oldOptions.style !== newOptions.style
-    || oldOptions.credits !== newOptions.credits) {
+    || oldOptions.credits !== newOptions.credits
+    || !isEqual(oldOptions.requestRuleRefreshHash, newOptions.requestRuleRefreshHash)) {
         return createLayer(newOptions);
     }
     if (oldOptions.minResolution !== newOptions.minResolution) {
@@ -173,6 +195,9 @@ const updateLayer = (layer, newOptions, oldOptions) => {
     }
     if (oldOptions.maxResolution !== newOptions.maxResolution) {
         layer.setMaxResolution(newOptions.maxResolution === undefined ? Infinity : newOptions.maxResolution);
+    }
+    if (!isEqual(oldOptions.security, newOptions.security)) {
+        layer.getSource().setTileLoadFunction(tileLoadFunction(newOptions));
     }
     return null;
 };

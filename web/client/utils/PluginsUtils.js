@@ -7,14 +7,15 @@
  */
 
 import React from 'react';
-import assign from 'object-assign';
-import {endsWith, get, head, isArray, isFunction, isObject, isString, memoize, omit, size} from 'lodash';
+import {endsWith, get, head, isArray, isFunction, isObject, isString, memoize, omit, size, maxBy } from 'lodash';
 import {connect as originalConnect} from 'react-redux';
 import url from 'url';
 import curry from 'lodash/curry';
 import {combineEpics as originalCombineEpics} from 'redux-observable';
 import {combineReducers as originalCombineReducers} from 'redux';
 import {wrapEpics} from "./EpicsUtils";
+import { randomInt } from './RandomUtils';
+import { pluginUtilsExpressionEvaluation } from './ExpressionUtils';
 
 /**
  * Loads a script inside the current page.
@@ -25,7 +26,7 @@ function loadScript(src) {
         const s = document.createElement('script');
         let r = false;
         s.type = 'text/javascript';
-        s.src = src;
+        s.src = src + "?v=" + randomInt();
         s.async = true;
         s.onerror = function(err) {
             reject(err, s);
@@ -127,7 +128,7 @@ export const combineEpics = (plugins, epics = {}, epicWrapper) => {
  */
 export const filterState = memoize((state, monitor) => {
     return monitor.reduce((previous, current) => {
-        return assign(previous, {
+        return Object.assign(previous, {
             [current.name]: get(state, current.path)
         });
     }, {});
@@ -155,39 +156,55 @@ export const getPluginConfiguration = (cfg, plugin) => {
     return head(matches) || {}
 };
 
-/* eslint-disable */
-const parseExpression = (state = {}, context = {}, value) => {
+
+/**
+ * This function evaluates a plugin configuration value.
+ * If the value is a string like this "{expression}" evaluates it using a superset of [filtrex](https://www.npmjs.com/package/filtrex) syntax.
+ * The expression will be evaluated getting as parameters the state and the context and the request.
+ * @memberof utils.PluginsUtils
+ * @param {function} state function that extracts from state the monitored state
+ * @param {object} context set of functions and objects available for context evaluation
+ * @param {string} value the value or expression to evaluate
+ * @returns {object} the result of the expression evaluation or the value if it's not an expression.
+ */
+const parsePluginExpression = (state = {}, context = {}, value) => {
     const searchExpression = /^\{(.*)\}$/;
     const expression = searchExpression.exec(value);
-    const dispatch = (action, ...rest) => {
-        return () => state("store").dispatch(action.apply(null, [action, ...rest]));
-    };
     const request = url.parse(location.href, true);
     if (expression !== null) {
         let modifiedExpression = expression[1];
         // adding optional operator to the expression
-        if (modifiedExpression.includes(").")) {
-            modifiedExpression = modifiedExpression.replaceAll(").", ")?.");
-        }
-        return eval(modifiedExpression);
+        return pluginUtilsExpressionEvaluation(modifiedExpression, {state, context: {
+            request,
+            ...context
+        }});
+
+
     }
     return value;
 };
-/* eslint-enable */
 /**
- * Parses a expression string "{some javascript}" and evaluate it.
+ * Parses a value. If it is a string like this "{expression}" evaluates it using a superset of [filtrex](https://www.npmjs.com/package/filtrex) syntax.
  * The expression will be evaluated getting as parameters the state and the context and the request.
  * @memberof utils.PluginsUtils
  * @param  {object} state      the state context
  * @param  {object} context    the context element
  * @param  {string} expression the expression to parse, it's a string
+ * @param {function} [onError] optional trigger a callback if there was a error parsing the expression.
  * @return {object}            the result of the expression
- * @example "{1===0 && request.query.queryParam1=paramValue1}"
- * @example "{1===0 && context.el1 === 'checked'}"
+ * @example "{request.query.queryParam1===paramValue1}"
+ * @example "{context.el1 === 'checked'}"
  */
-export const handleExpression = (state, context, expression) => {
+export const handleExpression = (state, context, expression, onError = () => {}) => {
     if (isString(expression) && expression.indexOf('{') === 0) {
-        return parseExpression(state, context, expression);
+        try {
+            return parsePluginExpression(state, context, expression);
+        } catch(e) {
+            const report = `[ExpressionError] ${e.message}\n Source: ${e.original}\n Transformed: ${e.transformed}`;
+            console.error(report, e);
+            onError(e);
+            return null;
+        }
     }
     return expression;
 };
@@ -238,7 +255,7 @@ const includeLoaded = (name, loadedPlugins, plugin, stateSelector) => {
     if (loadedPlugins[name]) {
         const loaded = loadedPlugins[name];
         const impl = getPluginImplementation(loaded.component || loaded, stateSelector);
-        return assign(impl, plugin, {loadPlugin: undefined}, {...loaded.containers});
+        return Object.assign(impl, plugin, {loadPlugin: undefined}, {...loaded.containers});
     }
     return plugin;
 };
@@ -269,29 +286,45 @@ export const getMorePrioritizedContainer = (plugin, override = {}, plugins, prio
     const pluginImpl = plugin.impl;
     return plugins.reduce((previous, current) => {
         const containerName = current.name || current;
-        const pluginPriority = getPriority(plugin, override, containerName);
-        return pluginPriority > previous.priority ? {
+        const currentPlugin = !isArray(pluginImpl[containerName])
+            ? { priority: getPriority(plugin, override, containerName), impl: pluginImpl[containerName] }
+            : maxBy(pluginImpl[containerName]
+                .map((containerConfig) => {
+                    return {
+                        priority: getPriority({ impl: { [containerName]: containerConfig } }, override, containerName),
+                        impl: containerConfig
+                    };
+                }), 'priority')
+            ;
+        return currentPlugin.priority > previous.priority ? {
             plugin: {
                 name: containerName,
                 impl: {
-                    ...(isFunction(pluginImpl[containerName]) ? pluginImpl[containerName](plugin.config) : pluginImpl[containerName]),
+                    ...(isFunction(currentPlugin.impl) ? currentPlugin.impl(plugin.config) : currentPlugin.impl),
                     ...(override[containerName] ?? {})}
             },
-            priority: pluginPriority} : previous;
+            priority: currentPlugin.priority} : previous;
     }, {plugin: null, priority: priority});
 };
 
-const parsePluginConfig = (state, requires, cfg) => {
+const parsePluginConfig = (state, requires, cfg, onError = () => {}) => {
     if (isArray(cfg)) {
         return cfg.map((value) => parsePluginConfig(state, requires, value));
     }
     if (isObject(cfg)) {
         return Object.keys(cfg).reduce((previous, current) => {
             const value = cfg[current];
-            return assign(previous, {[current]: parsePluginConfig(state, requires, value)});
+            return Object.assign(previous, {[current]: parsePluginConfig(state, requires, value)});
         }, {});
     }
-    return parseExpression(state, requires, cfg);
+    try {
+        return parsePluginExpression(state, requires, cfg);
+    } catch(e) {
+            const report = `[ExpressionError] ${e.message} | Source: ${e.original}`;
+            console.error(report, e);
+            onError(e);
+            return null;
+        }
 };
 
 const canContain = (container, plugin, override = {}) => {
@@ -380,7 +413,7 @@ export const getPluginItems = (state, plugins = {}, pluginsConfig = {}, containe
 
 const pluginsMergeProps = (stateProps, dispatchProps, ownProps) => {
     const {pluginCfg, ...otherProps} = ownProps;
-    return assign({}, otherProps, stateProps, dispatchProps, pluginCfg || {});
+    return Object.assign({}, otherProps, stateProps, dispatchProps, pluginCfg || {});
 };
 
 /**
@@ -480,7 +513,7 @@ export const getPluginDescriptor = (state, plugins, pluginsConfig, pluginDef, lo
         id: id || name,
         name,
         impl: includeLoaded(name, loadedPlugins, getPluginImplementation(impl, stateSelector), stateSelector),
-        cfg: assign({}, impl.cfg || {}, isObject(pluginDef) ? parsePluginConfig(state, plugins.requires, pluginDef.cfg) : {}),
+        cfg: Object.assign({}, impl.cfg || {}, isObject(pluginDef) ? parsePluginConfig(state, plugins.requires, pluginDef.cfg) : {}),
         items: getPluginItems(state, plugins, pluginsConfig, name, id, isDefault, loadedPlugins)
     };
 };
@@ -582,13 +615,13 @@ export const createPlugin = (name, { component, options = {}, containers = {}, r
         loadPlugin: (resolve) => {
             loader().then(loadedImpl => {
                 const impl = loadedImpl.default || loadedImpl;
-                resolve(assign(impl, { isMapStorePlugin: true }));
+                resolve(Object.assign(impl, { isMapStorePlugin: true }));
             });
         },
         enabler
-    } : assign(component, { isMapStorePlugin: true });
+    } : Object.assign(component, { isMapStorePlugin: true });
     return {
-        [pluginName]: assign(pluginImpl, containers, options),
+        [pluginName]: Object.assign(pluginImpl, containers, options),
         reducers,
         epics
     };
@@ -617,10 +650,12 @@ export const createPlugin = (name, { component, options = {}, containers = {}, r
  * @returns {Promise} a Promise that resolves to a lazy plugin object.
  */
 export const loadPlugin = (pluginUrl, pluginName) => {
-    return loadScript(pluginUrl)
-        .then(() =>importPlugin(pluginName))
+    const script = document.querySelector(`script[src^="${pluginUrl}"]`);
+    // load the script if not already loaded
+    const load = script ? Promise.resolve() : loadScript(pluginUrl);
+    return load
+        .then(() => importPlugin(pluginName))
         .then((plugin) => ({ name: pluginName, plugin}));
-
 };
 
 /**

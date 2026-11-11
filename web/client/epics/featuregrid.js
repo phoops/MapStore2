@@ -11,10 +11,8 @@ import {get, head, isEmpty, find, castArray, includes, reduce} from 'lodash';
 import { LOCATION_CHANGE } from 'connected-react-router';
 import axios from '../libs/ajax';
 import bbox from '@turf/bbox';
-import { fidFilter } from '../utils/ogc/Filter/filter';
-import { getDefaultFeatureProjection, getPagesToLoad, gridUpdateToQueryUpdate, updatePages  } from '../utils/FeatureGridUtils';
+import { createChangesTransaction, getDefaultFeatureProjection, getPagesToLoad, gridUpdateToQueryUpdate, updatePages  } from '../utils/FeatureGridUtils';
 
-import assign from 'object-assign';
 import {
     changeDrawingStatus,
     GEOMETRY_CHANGED,
@@ -172,7 +170,7 @@ import { MapLibraries } from '../utils/MapTypeUtils';
 
 const setupDrawSupport = (state, original) => {
     const defaultFeatureProj = getDefaultFeatureProjection();
-    const geomType = findGeometryProperty(describeSelector(state)).localType;
+    const geomType = findGeometryProperty(describeSelector(state))?.localType;
     const drawOptions = {
         featureProjection: defaultFeatureProj,
         stopAfterDrawing: MapUtils.isSimpleGeomType(geomType),
@@ -181,7 +179,7 @@ const setupDrawSupport = (state, original) => {
     };
 
     let features = selectedFeaturesSelector(state).map(ft => {
-        let feature = assign({}, ft, {type: "Feature"});
+        let feature = Object.assign({}, ft, {type: "Feature"});
         if (!isEmpty(feature)) {
 
             // TODO check this WITH APPLY CHANGES
@@ -232,15 +230,6 @@ const addPagination = (filterObj, pagination) => ({
     pagination
 });
 
-const createChangesTransaction = (changes, newFeatures, {insert, update, propertyChange, getPropertyName, transaction})=>
-    transaction(
-        newFeatures.map(f => insert(f)),
-        Object.keys(changes).map( id =>
-            Object.keys(changes[id]).map(name =>
-                update([propertyChange(getPropertyName(name), changes[id][name]), fidFilter("ogc", id)])
-            )
-        )
-    );
 const createDeleteTransaction = (features, {transaction, deleteFeature}) => transaction(
     features.map(deleteFeature)
 );
@@ -489,7 +478,7 @@ export const enableGeometryFilterOnEditMode = (action$, store) =>
         .switchMap(() => {
             const currentFilter = find(getAttributeFilters(store.getState()), f => f.type === 'geometry') || {};
             return currentFilter.value ? Rx.Observable.empty() : Rx.Observable.of(updateFilter({
-                attribute: findGeometryProperty(describeSelector(store.getState())).name,
+                attribute: findGeometryProperty(describeSelector(store.getState()))?.name,
                 enabled: true,
                 type: "geometry"
             }));
@@ -770,7 +759,7 @@ export const handleEditFeature = (action$, store) => action$.ofType(START_EDITIN
             editEnabled: true,
             drawEnabled: false
         };
-        let feature = assign({}, selectedFeatureSelector(state), {type: "Feature"});
+        let feature = Object.assign({}, selectedFeatureSelector(state), {type: "Feature"});
         let changes = changesMapSelector(state);
         if (changes[feature.id] && changes[feature.id] && changes[feature.id].geometry) {
             feature.geometry = changes[feature.id].geometry;
@@ -787,7 +776,7 @@ export const handleDrawFeature = (action$, store) => action$.ofType(START_DRAWIN
         const describe = describeSelector(state);
         const defaultFeatureProj = getDefaultFeatureProjection();
         const geomType = findGeometryProperty(describe).localType;
-        let feature = assign({}, selectedFeatureSelector(state), {type: "Feature"});
+        let feature = Object.assign({}, selectedFeatureSelector(state), {type: "Feature"});
         let changes = changesMapSelector(state);
         if (changes[feature.id] && (changes[feature.id].geometry || changes[feature.id].geometry === null)) {
             feature.geometry = changes[feature.id].geometry;
@@ -863,11 +852,11 @@ export const onFeatureGridGeometryEditing = (action$, store) => action$.ofType(G
         };
 
         let changedFeatures = a.features.map((ft, index) => {
-            return assign({}, ft, {id: selectedFeaturesSelector(state)[index].id, _new: selectedFeaturesSelector(state)[index]._new, type: "Feature"});
+            return Object.assign({}, ft, {id: selectedFeaturesSelector(state)[index].id, _new: selectedFeaturesSelector(state)[index]._new, type: "Feature"});
         });
 
         // use one of the features to get drawing method i.e. feature.geometry.type
-        let feature = assign({}, head(a.features), {id: selectedFeatureSelector(state).id, _new: selectedFeatureSelector(state)._new, type: "Feature"});
+        let feature = Object.assign({}, head(a.features), {id: selectedFeatureSelector(state).id, _new: selectedFeatureSelector(state)._new, type: "Feature"});
         let enableEdit = a.enableEdit === "enterEditMode" ? Rx.Observable.of(changeDrawingStatus("drawOrEdit", feature.geometry.type, "featureGrid", changedFeatures, drawOptions)) : Rx.Observable.empty();
 
         return Rx.Observable.of(geometryChanged(changedFeatures)).concat(enableEdit);
@@ -1047,7 +1036,7 @@ export const onOpenAdvancedSearch = (action$, store) =>
                     // merge advanced filter with columns filters
                         return Rx.Observable.of(
                             createQuery(action.searchUrl, action.filterObj),
-                            storeAdvancedSearchFilter(assign({}, queryFormUiStateSelector(store.getState()), action.filterObj)),
+                            storeAdvancedSearchFilter(Object.assign({}, queryFormUiStateSelector(store.getState()), action.filterObj)),
                             setControlProperty('queryPanel', "enabled", false),
                             openFeatureGrid(),
                             isSyncWmsActive(store.getState()) ? startSyncWMS() : Rx.Observable.empty()          // to keep sync icon active if it is previously active before opening advanced search

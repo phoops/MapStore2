@@ -6,7 +6,7 @@
   * LICENSE file in the root directory of this source tree.
   */
 
-import { identity, trim, fill, findIndex, get, isArray, isNil, isString, isPlainObject, includes } from 'lodash';
+import { identity, trim, fill, findIndex, get, isArray, isNil, isString, isPlainObject, includes, isEmpty } from 'lodash';
 
 import {
     findGeometryProperty,
@@ -18,9 +18,22 @@ import {
 } from './ogc/WFS/base';
 
 import { applyDefaultToLocalizedString } from '../components/I18N/LocalizedString';
+import { fidFilter } from './ogc/Filter/filter';
 
 const getGeometryName = (describe) => get(findGeometryProperty(describe), "name");
 const getPropertyName = (name, describe) => name === "geometry" ? getGeometryName(describe) : name;
+
+/**
+ * Check if a field name is considered a primary key
+ * @param {string} fieldName - The field name to check
+ * @param {string[]} customPrimaryKeyNames - Optional custom list of primary key names from config
+ * @returns {boolean} True if the field is a primary key
+ */
+export const isPrimaryKeyField = (fieldName, customPrimaryKeyNames = []) => {
+    if (!fieldName) return false;
+    const allPrimaryKeyNames = !isEmpty(customPrimaryKeyNames) ? customPrimaryKeyNames : [];
+    return includes(allPrimaryKeyNames.map(name => name.toLowerCase()), fieldName.toLowerCase());
+};
 
 export const getBlockIdx = (indexes = [], size = 0, rowIdx) => findIndex(indexes, (startIdx) => startIdx <= rowIdx && rowIdx < startIdx + size);
 
@@ -123,34 +136,40 @@ export const getCurrentPaginationOptions = ({ startPage, endPage }, oldPages, si
  * @param {object[]} fields fields configuration (Includes `name` `alias`)
  * @param {object} getters getters functions for creating header, filterRenderer, formatter, heditor ( Includes `getEditor` `getFilterRenderer` `getFormatter` `getHeaderRenderer`)
  * @param {*} param4
- * @returns
  */
 export const featureTypeToGridColumns = (
     describe,
+    featurePropertiesJSONSchema,
     columnSettings = {},
     fields = [],
-    {editable = false, sortable = true, resizable = true, filterable = true, defaultSize = 200, options = []} = {},
+    {editable = false, sortable = true, resizable = true, filterable = true, defaultSize = 200, options = [], primaryKeyAttributes = []} = {},
     {getEditor = () => {}, getFilterRenderer = () => {}, getFormatter = () => {}, getHeaderRenderer = () => {}, isWithinAttrTbl = false} = {}) =>
     getAttributeFields(describe).filter(e => !(columnSettings[e.name] && columnSettings[e.name].hide)).map((desc) => {
         const option = options.find(o => o.name === desc.name);
         const field = fields.find(f => f.name === desc.name);
+        const schema = featurePropertiesJSONSchema?.properties?.[desc.name];
+        const schemaRequired = (featurePropertiesJSONSchema?.required || []).includes(desc.name);
+        const isPrimaryKey = isPrimaryKeyField(desc.name, primaryKeyAttributes);
         let columnProp = {
             sortable,
             key: desc.name,
             width: columnSettings[desc.name] && columnSettings[desc.name].width || (defaultSize ? defaultSize : undefined),
-            name: columnSettings[desc.name] && columnSettings[desc.name].label || desc.name,
+            name: desc.name,
             description: option?.description || '',
-            title: applyDefaultToLocalizedString(option?.title || field?.alias, desc.name),
+            title: applyDefaultToLocalizedString(option?.title || field?.alias, columnSettings[desc.name] && columnSettings[desc.name].label || desc.name),
             headerRenderer: getHeaderRenderer(),
             showTitleTooltip: !!option?.description,
             resizable,
             editable,
             filterable,
-            editor: getEditor(desc, field),
+            editor: getEditor(desc, field, schema),
             formatter: getFormatter(desc, field),
-            filterRenderer: getFilterRenderer(desc, field)
+            filterRenderer: getFilterRenderer(desc, field),
+            schema,
+            schemaRequired,
+            isPrimaryKey
         };
-        if (isWithinAttrTbl) columnProp.width = 300;
+        if (isWithinAttrTbl) columnProp.width = columnSettings[desc.name]?.width || 300;
         return columnProp;
     });
 /**
@@ -392,3 +411,55 @@ export const supportsFeatureEditing = (layer) => includes(supportedEditLayerType
  * @returns {boolean} flag
  */
 export const areLayerFeaturesEditable = (layer) =>  !layer?.disableFeaturesEditing && supportsFeatureEditing(layer);
+/**
+ * Create wfs-t xml payload for insert/edit features in featuregrid
+ * @param {object} changes object that contains updates e.g: {LAYER_NAME.id: {"FIELD1": 55, "FIELD2":"edit 02"}}
+ * @param {object[]} newFeatures array of new inserted features
+ * @param {object} wfsutils object of wfs utils that includes insert/update/propertyChange/getPropertyName/transaction
+ * @returns {string} wfs-transaction xml payload
+ */
+export const createChangesTransaction = (changes, newFeatures, {insert, update, propertyChange, getPropertyName: getPropertyNameFunc, transaction})=>
+    transaction(
+        newFeatures.map(f => insert(f)),
+        Object.keys(changes).map( id =>{
+            return update(Object.keys(changes[id]).map(prop => propertyChange(getPropertyNameFunc(prop), changes[id][prop])), fidFilter("ogc", id));
+        })
+    );
+
+
+export const getRestrictionsMessageInfo = (schema, required) => {
+    if (!schema) {
+        return null;
+    }
+    const enumerator = schema?.enum;
+    const minimum = schema?.minimum;
+    const maximum = schema?.maximum;
+    const requiredMessage = required ? ['featuregrid.restrictions.required'] : [];
+    const rangeMessage = minimum !== undefined && maximum !== undefined ? ['featuregrid.restrictions.range'] : [];
+    const minimumMessage = !rangeMessage.length && minimum !== undefined ? ['featuregrid.restrictions.greaterEqualThan'] : [];
+    const maximumMessage = !rangeMessage.length && maximum !== undefined ? ['featuregrid.restrictions.lessEqualThan'] : [];
+    const optionsMessage = enumerator ? ['featuregrid.restrictions.options'] : [];
+
+    const msgIds = [
+        ...requiredMessage,
+        ...rangeMessage,
+        ...minimumMessage,
+        ...maximumMessage,
+        ...optionsMessage
+    ];
+
+    if (msgIds?.length) {
+        return {
+            msgIds: [
+                ...msgIds,
+                ...(requiredMessage.length ? [] : ['featuregrid.restrictions.nillable'])
+            ],
+            msgParams: {
+                options: (enumerator || []).filter(value => value !== null).join(', '),
+                minimum: minimum?.toString(),
+                maximum: maximum?.toString()
+            }
+        };
+    }
+    return null;
+};

@@ -30,11 +30,11 @@ import {
 import { updateHighlighted } from '../../actions/highlight';
 import { warning } from '../../actions/notifications';
 import { connect } from 'react-redux';
-import assign from 'object-assign';
 import { projectionDefsSelector, isMouseMoveActiveSelector } from '../../selectors/map';
 import {
     snappingLayerSelector
 } from "../../selectors/draw";
+import { mapPopupsSelector } from '../../selectors/mapPopups';
 
 const Empty = () => { return <span/>; };
 
@@ -50,7 +50,7 @@ const pluginsCreator = (mapType, actions) => {
         const LMap = connect((state) => ({
             projectionDefs: projectionDefsSelector(state),
             mousePosition: isMouseMoveActiveSelector(state)
-        }), assign({}, {
+        }), Object.assign({}, {
             onMapViewChanges: changeMapView,
             onClick: clickOnMap,
             onMouseMove: mouseMove,
@@ -60,7 +60,7 @@ const pluginsCreator = (mapType, actions) => {
             onWarning: warning,
             onMouseOut: mouseOut
         }, actions), (stateProps, dispatchProps, ownProps) => {
-            return assign({}, ownProps, stateProps, assign({}, dispatchProps, {
+            return Object.assign({}, ownProps, stateProps, Object.assign({}, dispatchProps, {
                 onMouseMove: stateProps.mousePosition ? dispatchProps.onMouseMove : () => {}
             }));
         })(components.LMap);
@@ -101,13 +101,11 @@ const pluginsCreator = (mapType, actions) => {
 
         const LLayer = connect(null, {onWarning: warning})( components.Layer || Empty);
 
-        const EMPTY_POPUPS = [];
         const PopupSupport = connect(
             createSelector(
-                (state) => state.mapPopups && state.mapPopups.popups || EMPTY_POPUPS,
-                (popups) => ({
-                    popups
-                })), {
+                mapPopupsSelector,
+                (popups) => ({popups})
+            ), {
                 onPopupClose: removePopup
             }
         )(components.PopupSupport || Empty);

@@ -44,6 +44,12 @@
     display: block;
 }
 
+.modal, .modal-dialog {
+    .modal-header .close {
+        border-radius: @border-radius-base;
+    }
+}
+
 .ms-resizable-modal {
     position: absolute;
     text-align: left;
@@ -53,16 +59,6 @@
     top: 0;
     left: 0;
 
-    .ms-header {
-        .row {
-            &:first-child {
-                padding-top: 15px;
-            }
-            & + .row {
-                padding-top: 15px;
-            }
-        }
-    }
     pre {
         white-space: pre-wrap;
     }
@@ -136,40 +132,6 @@
             transform: translate(0, 0) !important;
         }
 
-        & > .modal-header {
-            @media (min-width: @screen-xs-max) {
-                height: @square-btn-size;
-            }
-            padding: ((@square-btn-size - @font-size-h4) / 2);
-            border: none;
-            flex-shrink: 0;
-            .modal-title {
-                display: flex;
-                .ms-title {
-                    flex: 1;
-                    text-overflow: ellipsis;
-                    @media (min-width: @screen-xs-max) {
-                        white-space: nowrap;
-                        height: @font-size-h4;
-                        line-height: @font-size-h4;
-                    }
-                }
-                .ms-header-btn {
-                    cursor: pointer;
-                    margin-right: 10px;
-                    transition: 0.3s;
-                    display: inline-block;
-                    &:hover {
-                        transform: scale(1.2);
-                    }
-                    &:last-child {
-                        margin-right: 0;
-                    }
-                }
-
-            }
-        }
-
         & > .modal-body {
             flex: 1 1 auto;
             padding: 0;
@@ -226,15 +188,15 @@
         }
 
         & > .modal-footer {
-            min-height: @square-btn-size;
+            min-height: 40px;
             border: none;
             padding: 0;
             z-index: 10;
             & > div {
-                min-height: @square-btn-size;
+                min-height: 40px;
             }
             .btn-group {
-                margin: ((@square-btn-size - 34) / 2);
+                margin: 3px;
             }
         }
     }
@@ -398,46 +360,6 @@
             .modal-dialog {
                 pointer-events: auto;
             }
-        }
-    }
-}
-
-.ms-resizable-modal-fade-enter {
-    opacity: 0.01;
-    .modal.fade.in {
-        .modal-dialog {
-            transform: translateY(-25%);
-        }
-    }
-}
-
-.ms-resizable-modal-fade-enter.ms-resizable-modal-fade-enter-active {
-    opacity: 1;
-    transition: 0.3s ease-in;
-    .modal.fade.in {
-        .modal-dialog {
-            transition: 0.3s ease-in;
-            transform: translateY(0);
-        }
-    }
-}
-
-.ms-resizable-modal-fade-leave {
-    opacity: 1;
-    .modal.fade.in {
-        .modal-dialog {
-            transform: translateY(0);
-        }
-    }
-}
-
-.ms-resizable-modal-fade-leave.ms-resizable-modal-fade-leave-active {
-    opacity: 0.01;
-    transition: 0.3s ease-in;
-    .modal.fade.in {
-        .modal-dialog {
-            transition: 0.3s ease-in;
-            transform: translateY(-25%);
         }
     }
 }

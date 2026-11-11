@@ -11,7 +11,6 @@ import geo from 'node-geo-distance';
 import Proj4js from 'proj4';
 const proj4 = Proj4js;
 import axios from '../libs/ajax';
-import assign from 'object-assign';
 
 import {
     isArray,
@@ -23,7 +22,8 @@ import {
     isNumber,
     slice,
     head,
-    last
+    last,
+    isNaN
 } from 'lodash';
 import turfCircle from '@turf/circle';
 
@@ -140,7 +140,7 @@ export const reproject = (point, source, dest, normalize = true) => {
     if (sourceProj && destProj) {
         let p = isArray(point) ? Proj4js.toPoint(point) : Proj4js.toPoint([point.x, point.y]);
 
-        const transformed = assign({}, source === dest ? numberize(p) : Proj4js.transform(sourceProj, destProj, numberize(p)), {srs: dest});
+        const transformed = Object.assign({}, source === dest ? numberize(p) : Proj4js.transform(sourceProj, destProj, numberize(p)), {srs: dest});
         if (normalize) {
             return normalizePoint(transformed);
         }
@@ -266,7 +266,7 @@ export const crsCodeTable = {
  * @memberof utils
  */
 export const setCrsLabels = (labels) => {
-    crsLabels = assign({}, crsLabels, labels);
+    crsLabels = Object.assign({}, crsLabels, labels);
 };
 export const getUnits = function(projection) {
     const proj = new Proj4js.Proj(projection);
@@ -383,33 +383,38 @@ export const normalizeLng = (lng) => {
  * @param dest {string} SRS of the returned bbox
  * @return {array} [minx, miny, maxx, maxy]
  */
-export const reprojectBbox = function(bbox, source, dest, normalize = true) {
-    let points;
-    if (isArray(bbox)) {
-        points = {
-            sw: [bbox[0], bbox[1]],
-            ne: [bbox[2], bbox[3]]
-        };
-    } else {
-        points = {
-            sw: [bbox.minx, bbox.miny],
-            ne: [bbox.maxx, bbox.maxy]
-        };
+export const reprojectBbox = (bbox, source, dest) => {
+    const sourceProj = source && Proj4js.defs(source);
+    const destProj = dest && Proj4js.defs(dest);
+    if (!(sourceProj && destProj)) {
+        return null;
     }
-    let projPoints = [];
-    for (let p in points) {
-        if (points.hasOwnProperty(p)) {
-            const projected = CoordinatesUtils.reproject(points[p], source, dest, normalize);
-            if (projected) {
-                let {x, y} = projected;
-                projPoints.push(x);
-                projPoints.push(y);
-            } else {
-                return null;
-            }
+    const points = isArray(bbox)
+        ? [[bbox[0], bbox[1]], [bbox[2], bbox[3]]]
+        : [[bbox.minx, bbox.miny], [bbox.maxx, bbox.maxy]];
+    const crsMaxExtent = getProjection(dest).extent;
+    const maxExtent = [[crsMaxExtent[0], crsMaxExtent[1]], [crsMaxExtent[2], crsMaxExtent[3]]];
+    const projectedPoints = points.map((point, idx) => {
+        // return projected point not normalized
+        // so we can detect NaN or values
+        const { x, y } = CoordinatesUtils.reproject(point, source, dest, false) || {};
+        const [defaultX, defaultY] = maxExtent[idx];
+        if (x !== undefined || y !== undefined) {
+            // if value is NaN probably is because it is outside the maximum extent
+            // normalize option for reproject is falling back to 0 that could works for single point
+            // but not bounds
+            return [
+                isNaN(x) || x === undefined ? defaultX : x,
+                isNaN(y) || y === undefined ? defaultY : y
+            ];
         }
-    }
-    return projPoints;
+        // if null could means that latitude conversion could not be computed
+        // in particular EPSG:4326 to EPSG:3857 with lat -90 or 90
+        // we could fallback on the limit of the current projection
+        return [defaultX, defaultY];
+    });
+    const extent = projectedPoints.flat();
+    return extent.length === 4 ? extent : null;
 };
 export const bboxToFeatureGeometry = (bbox) => {
     const bboxObj = isArray(bbox) ? {
@@ -478,13 +483,13 @@ export const getAvailableCRS = function() {
 };
 export const filterCRSList = (availableCRS, filterAllowedCRS, additionalCRS, projDefs ) => {
     let crs = Object.keys(availableCRS).reduce( (p, c) => {
-        return assign({}, filterAllowedCRS.indexOf(c) === -1 ? p : {...p, [c]: availableCRS[c]});
+        return Object.assign({}, filterAllowedCRS.indexOf(c) === -1 ? p : {...p, [c]: availableCRS[c]});
     }, {});
     const codeProjections = projDefs.map(p => p.code);
     let newAdditionalCRS = Object.keys(additionalCRS).reduce( (p, c) => {
-        return assign({}, codeProjections.indexOf(c) === -1 ? p : {...p, [c]: additionalCRS[c]});
+        return Object.assign({}, codeProjections.indexOf(c) === -1 ? p : {...p, [c]: additionalCRS[c]});
     }, {});
-    return assign({}, crs, newAdditionalCRS);
+    return Object.assign({}, crs, newAdditionalCRS);
 };
 export const calculateAzimuth = function(p1, p2, pj) {
     var p1proj = CoordinatesUtils.reproject(p1, pj, 'EPSG:4326');
@@ -1077,6 +1082,32 @@ export const checkIfLayerFitsExtentForProjection = (layer = {}) => {
     const [crsMinX, crsMinY, crsMaxX, crsMaxY] = getProjection(crs).extent;
     const [minx, minY, maxX, maxY] = turfBbox({type: 'FeatureCollection', features: layer.features || []});
     return ((minx >= crsMinX) && (minY >= crsMinY) && (maxX <= crsMaxX) && (maxY <= crsMaxY));
+};
+
+/**
+ * Return new bounds fitting the maximum extent of a given projection
+ * @param bounds {object|array} minimum and maximum value of the bounds [minx, miny, maxx, maxy] or {minx, miny, maxx, maxy}
+ * @param projection {string} projection code of the bounds
+ * @return {object|array} parsed bounds that fit the given projection maximum extent
+ */
+export const fitBoundsToProjectionExtent = (bounds, projection) => {
+    const [crsMinX, crsMinY, crsMaxX, crsMaxY] = getProjection(projection).extent;
+    if (isArray(bounds)) {
+        const [ minx, miny, maxx, maxy ] = bounds;
+        return [
+            minx < crsMinX ? crsMinX : minx,
+            miny < crsMinY ? crsMinY : miny,
+            maxx > crsMaxX ? crsMaxX : maxx,
+            maxy > crsMaxY ? crsMaxY : maxy
+        ];
+    }
+    const { minx, miny, maxx, maxy } = bounds;
+    return {
+        minx: minx < crsMinX ? crsMinX : minx,
+        miny: miny < crsMinY ? crsMinY : miny,
+        maxx: maxx > crsMaxX ? crsMaxX : maxx,
+        maxy: maxy > crsMaxY ? crsMaxY : maxy
+    };
 };
 
 /**

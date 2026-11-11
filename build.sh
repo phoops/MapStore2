@@ -3,35 +3,37 @@
 # Builds MapStore2, doing all needed clean-ups tests and checks and adding documentation.
 # You should use this script to generate a full valid MapStore2 package.
 # Use the `binary` profile to build also the binary package
+# You can use `mvn help:all-profiles` to list all available maven profiles
 #
 # Usage:
 # $ ./build.sh [version] [profiles]
 # * version: The version for the final package
-# * profiles: profiles for mvn build.
+# * profiles: profiles for mvn build (multiple profiles can be separated by commas)
 #
 # use `binary` to build also the binary package
 # use `printing` to include printing module in the ware
 # use `printing-bundle` to build also the zip bundle
 #
 # Example
-# $ ./build.sh 2022.02.00 binary
+# $ ./build.sh v2024.02.02 binary
 
+set -u
 set -e
 
 echo "Running NPM install to update dependencies"
-echo `date`
+date
 npm install
 
 echo "Building MS2 bundles"
-echo `date`
+date
 npm run fe:build
 
 echo "Cleanup Documentation"
-echo `date`
+date
 npm run jsdoc:clean
 
 echo "Checking syntax"
-echo `date`
+date
 npm run lint
 
 # echo "Run MapStore2 tests"
@@ -39,11 +41,11 @@ npm run lint
 # npm test
 
 echo "Creating Documentation"
-echo `date`
+date
 npm run jsdoc:build
 
 echo "Building final WAR package"
-echo `date`
+date
 if [ $# -eq 0 ]
   then
     cd java
@@ -55,14 +57,14 @@ if [ $# -eq 0 ]
         cd java
         mvn clean install
         cd ..
-        mvn clean install -Dmapstore2.version=$1
+        mvn clean install -Dmapstore2.version="$1"
     else
         cd java
-        mvn clean install -Dmapstore2.version=$1 -P$2
+        mvn clean install -Dmapstore2.version="$1" -P"$2"
         cd ..
-        mvn clean install -Dmapstore2.version=$1 -P$2
+        mvn clean install -Dmapstore2.version="$1" -P"$2"
 fi
 
 echo "Final Cleanup"
-echo `date`
+date
 npm run jsdoc:clean

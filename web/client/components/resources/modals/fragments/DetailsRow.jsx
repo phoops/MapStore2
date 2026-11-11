@@ -14,7 +14,9 @@ import Toolbar from '../../../misc/toolbar/Toolbar';
 
 import Message from '../../../I18N/Message';
 
-
+/**
+ * @deprecated
+ */
 export default ({
     loading = false,
     showPreview = false,
@@ -44,7 +46,7 @@ export default ({
                             <div className="pull-right">
                                 {loading ? <Spinner spinnerName="circle" noFadeIn overrideSpinnerClassName="spinner" /> : null}
                                 {!loading && <Toolbar
-                                    btnDefaultProps={{ className: 'square-button-md no-border' }}
+                                    btnDefaultProps={{ className: 'square-button no-border' }}
                                     buttons={[
                                         {
                                             glyph: showPreview ? 'eye-open' : 'eye-close',

@@ -15,6 +15,7 @@ import uuid from "uuid";
 
 import {getCurrentFocusedContentEl, isFocusOnContentSelector, resourcesSelector} from '../../../../selectors/geostory';
 import {createMapObject} from '../../../../utils/GeoStoryUtils';
+import {isNearlyEqual} from '../../../../utils/MapUtils';
 import Message from '../../../I18N/Message';
 import ToolbarButton from '../../../misc/toolbar/ToolbarButton';
 import withConfirm from '../../../misc/withConfirm';
@@ -37,9 +38,11 @@ export default compose(
             }))),
     withProps(
         ({ resources, resourceId, map = {}}) => {
-            const cleanedMap = {...map, layers: (map.layers || []).map(l => l ? l : undefined)};
             const resource = find(resources, { id: resourceId }) || {};
-            return { map: createMapObject(omit(resource.data, ['context']), cleanedMap)};
+            const baseMap = omit(resource.data, ['context']);
+            const isLegacyGeostory = (map?.layers || [])?.indexOf(null) !== -1 || (map?.groups || [])?.indexOf(null) !== -1;
+            const cleanedMap = {...map, layers: (map.layers || baseMap?.layers || []).map(lay => lay ? lay : undefined), groups: (map.groups || baseMap?.groups || []).map(gr => gr ? gr : undefined)};         // for better initiating cleanedMap layers in case 'map.layers = undefined' -> baseMap.layers check is added in fallBack
+            return { map: createMapObject(baseMap, cleanedMap, isLegacyGeostory)};
         }
     ));
 /**
@@ -58,8 +61,8 @@ export const withFocusedContentMap = compose(
  */
 export const handleMapUpdate = withHandlers({
     onChangeMap: ({update, focusedContent = {}}) =>
-        (path, value) => {
-            update(`${focusedContent.path}.map.${path}`, value, "merge");
+        (path, value, mode = "merge") => {
+            update(`${focusedContent.path}.map.${path}`, value, mode);
         },
     onChange: ({update, focusedContent = {}}) =>
         (path, value, mode = 'merge') => {
@@ -84,7 +87,7 @@ export const handleToolbar = withHandlers({
 const ResetButton = (props) => (<ConfirmButton
     glyph="repeat"
     bsStyle= "primary"
-    className="square-button-md no-border"
+    className="square-button no-border"
     tooltipId="geostory.contentToolbar.resetMap"
     confirmTitle={<Message msgId="geostory.contentToolbar.resetMapConfirm" />}
     confirmContent={<Message msgId="geostory.contentToolbar.resetConfirmContent" />}
@@ -163,15 +166,7 @@ export const withLocalMapState  = mapPropsStream(props$ => {
             };
         });
 });
-// current implementation will update the map only if the movement
-// between 12 decimals in the reference system to avoid rounded value
-// changes due to float mathematic operations.
-const isNearlyEqual = function(a, b) {
-    if (a === undefined || b === undefined) {
-        return false;
-    }
-    return a.toFixed(12) - b.toFixed(12) === 0;
-};
+
 /**
  * Handle editing, when mapEditing is true, map changes updates the geostory state, otherwise local map state is updated
  */

@@ -6,25 +6,31 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-const axios = require('axios');
-const combineURLs = require('axios/lib/helpers/combineURLs');
-const url = require('url');
-const ConfigUtils = require('../utils/ConfigUtils').default;
-const {isAuthenticationActivated, getAuthenticationRule, getToken,
-    getBasicAuthHeader} = require('../utils/SecurityUtils');
+import axios from 'axios';
+import combineURLs from 'axios/lib/helpers/combineURLs';
+import ConfigUtils from '../utils/ConfigUtils';
+import {
+    getAuthenticationMethod,
+    getAuthorizationBasic,
+    getRequestConfigurationByUrl,
+    getRequestConfigurationRule,
+    getToken,
+    isRequestConfigurationActivated
+} from '../utils/SecurityUtils';
 
-const assign = require('object-assign');
-const isObject = require('lodash/isObject');
-const omitBy = require('lodash/omitBy');
-const isNil = require('lodash/isNil');
-const urlUtil = require('url');
+import isObject from 'lodash/isObject';
+import omitBy from 'lodash/omitBy';
+import isNil from 'lodash/isNil';
+import urlUtil from 'url';
+import { getProxyCacheByUrl, setProxyCacheByUrl } from '../utils/ProxyUtils';
+import { isEmpty } from 'lodash';
 
 /**
  * Internal helper that adds an extra paramater to an axios configuration.
  */
 function addParameterToAxiosConfig(axiosConfig, parameterName, parameterValue) {
     // FIXME: the parameters can also be a URLSearchParams
-    axiosConfig.params = assign({}, axiosConfig.params, {[parameterName]: parameterValue});
+    axiosConfig.params = Object.assign({}, axiosConfig.params, {[parameterName]: parameterValue});
     // remove from URL auth parameters if any, to avoid possible duplication
     axiosConfig.url = axiosConfig.url ? ConfigUtils.getUrlWithoutParameters(axiosConfig.url, [parameterName]) : axiosConfig.url;
 }
@@ -33,72 +39,58 @@ function addParameterToAxiosConfig(axiosConfig, parameterName, parameterValue) {
  * Internal helper that adds or overrides an http header in a axios configuration.
  */
 function addHeaderToAxiosConfig(axiosConfig, headerName, headerValue) {
-    axiosConfig.headers = assign({}, axiosConfig.headers, {[headerName]: headerValue});
+    axiosConfig.headers = Object.assign({}, axiosConfig.headers, {[headerName]: headerValue});
 }
-
-const corsDisabled = [];
 
 /**
  * Internal helper that will add to the axios config object the correct
  * authentication method based on the request URL.
  */
 function addAuthenticationToAxios(axiosConfig) {
-    if (!axiosConfig || !axiosConfig.url || !isAuthenticationActivated()) {
+    if (!axiosConfig || !axiosConfig.url) {
         return axiosConfig;
     }
     const axiosUrl = combineURLs(axiosConfig.baseURL || '', axiosConfig.url);
-    const rule = getAuthenticationRule(axiosUrl);
 
-    switch (rule && rule.method) {
-    case 'browserWithCredentials':
-    {
-        axiosConfig.withCredentials = true;
-        return axiosConfig;
+    // Extract custom sourceId from axios config if provided
+    const sourceId = axiosConfig._msAuthSourceId;
+
+    const method = getAuthenticationMethod(axiosUrl);
+    if (method === "bearer" && !getToken()) return axiosConfig;
+    if (method === "authkey" && !getToken()) return axiosConfig;
+    if (method === "basic" && sourceId && isEmpty(getAuthorizationBasic(sourceId))) return axiosConfig;
+
+    // If request configuration is not activated but sourceId is provided, still need to handle basic auth
+    const { headers, params } = getRequestConfigurationByUrl(axiosUrl, undefined, sourceId);
+
+    if (headers) {
+        Object.entries(headers).forEach(([headerName, headerValue]) => {
+            addHeaderToAxiosConfig(axiosConfig, headerName, headerValue);
+        });
     }
-    case 'authkey':
-    {
-        const token = getToken();
-        if (!token) {
-            return axiosConfig;
+    if (params) {
+        Object.entries(params).forEach(([paramName, paramValue]) => {
+            addParameterToAxiosConfig(axiosConfig, paramName, paramValue);
+        });
+    }
+
+    // Check for withCredentials
+    if (isRequestConfigurationActivated()) {
+        const rule = getRequestConfigurationRule(axiosUrl);
+        if (rule?.withCredentials) {
+            axiosConfig.withCredentials = true;
         }
-        addParameterToAxiosConfig(axiosConfig, rule.authkeyParamName || 'authkey', token);
-        return axiosConfig;
     }
-    case 'test': {
-        const token = rule ? rule.token : "";
-        if (!token) {
-            return axiosConfig;
-        }
-        addParameterToAxiosConfig(axiosConfig, rule.authkeyParamName || 'authkey', token);
-        return axiosConfig;
-    }
-    case 'basic':
-        const basicAuthHeader = getBasicAuthHeader();
-        if (!basicAuthHeader) {
-            return axiosConfig;
-        }
-        addHeaderToAxiosConfig(axiosConfig, 'Authorization', basicAuthHeader);
-        return axiosConfig;
-    case 'bearer':
-    {
-        const token = getToken();
-        if (!token) {
-            return axiosConfig;
-        }
-        addHeaderToAxiosConfig(axiosConfig, 'Authorization', "Bearer " + token);
-        return axiosConfig;
-    }
-    default:
-        // we cannot handle the required authentication method
-        return axiosConfig;
-    }
+
+    // Remove the custom prop from config to avoid it being sent as a regular param
+    delete axiosConfig._msAuthSourceId;
+
+    return axiosConfig;
 }
 
-axios.interceptors.request.use(config => {
-    var uri = config.url || '';
+const checkSameOrigin = (uri) => {
     var sameOrigin = !(uri.indexOf("http") === 0);
     var urlParts = !sameOrigin && uri.match(/([^:]*:)\/\/([^:]*:?[^@]*@)?([^:\/\?]*):?([^\/\?]*)/);
-    addAuthenticationToAxios(config);
     if (urlParts) {
         let location = window.location;
         sameOrigin =
@@ -111,32 +103,40 @@ axios.interceptors.request.use(config => {
         lPort = lPort === "" ? defaultPort + "" : lPort + "";
         sameOrigin = sameOrigin && uPort === lPort;
     }
+    return sameOrigin;
+};
+
+axios.interceptors.request.use(config => {
+    addAuthenticationToAxios(config);
+    const uri = config.url || '';
+    const sameOrigin = checkSameOrigin(uri);
     if (!sameOrigin) {
         let proxyUrl = ConfigUtils.getProxyUrl(config);
         if (proxyUrl) {
             let useCORS = [];
-            let autoDetectCORS = false;
+            let autoDetectCORS = true;
             if (isObject(proxyUrl)) {
                 useCORS = proxyUrl.useCORS || [];
-                autoDetectCORS = proxyUrl.autoDetectCORS || false;
+                autoDetectCORS = proxyUrl.autoDetectCORS ?? true;
                 proxyUrl = proxyUrl.url;
             }
-            const isCORS = useCORS.reduce((found, current) => found || uri.indexOf(current) === 0, false);
-            const cannotUseCORS = corsDisabled.reduce((found, current) => found || uri.indexOf(current) === 0, false);
-            if (!isCORS && (!autoDetectCORS || cannotUseCORS)) {
+            const isCORS = useCORS.some((current) => uri.indexOf(current) === 0);
+            const proxyNeeded = getProxyCacheByUrl(uri) ||  !autoDetectCORS;
+            if (!isCORS && proxyNeeded) {
                 const parsedUri = urlUtil.parse(uri, true, true);
                 const params = omitBy(config.params, isNil);
                 config.url = proxyUrl + encodeURIComponent(
                     urlUtil.format(
-                        assign({}, parsedUri, {
+                        Object.assign({}, parsedUri, {
                             search: null,
-                            query: assign({}, parsedUri.query, params)
+                            query: Object.assign({}, parsedUri.query, params)
                         })
                     )
                 );
                 config.params = undefined;
-            } else if (autoDetectCORS) {
-                config.autoDetectCORS = true;
+            }
+            if (isCORS && proxyNeeded === undefined) {
+                setProxyCacheByUrl(uri, false);
             }
         }
     }
@@ -144,17 +144,23 @@ axios.interceptors.request.use(config => {
 });
 
 axios.interceptors.response.use(response => response, (error) => {
-    if (error.config && error.config.autoDetectCORS) {
-        const urlParts = url.parse(error.config.url);
-        const baseUrl = urlParts.protocol + "//" + urlParts.host + urlParts.pathname;
-        if (corsDisabled.indexOf(baseUrl) === -1) {
-            corsDisabled.push(baseUrl);
+    let proxyUrl = ConfigUtils.getProxyUrl();
+    const sameOrigin = checkSameOrigin(error?.config?.url || '');
+    const errorResponseFunc = () => Promise.reject(error.response ? {...error.response, originalError: error} : error);
+    if (error.config && !error.config.url.includes(proxyUrl.url) && !sameOrigin) {
+        if (getProxyCacheByUrl(error.config.url) === undefined && typeof error.response === 'undefined') {
+            setProxyCacheByUrl(error.config.url, true);
+            // noProxy is a custom configuration
+            // to avoid the retry call
+            if (error.config.noProxy) {
+                return errorResponseFunc();
+            }
             return new Promise((resolve, reject) => {
-                axios({ ...error.config, autoDetectCORS: false}).then(resolve).catch(reject);
+                axios({ ...error.config }).then(resolve).catch(reject);
             });
         }
     }
-    return Promise.reject(error.response ? {...error.response, originalError: error} : error);
+    return errorResponseFunc();
 });
 
-module.exports = axios;
+export default axios;

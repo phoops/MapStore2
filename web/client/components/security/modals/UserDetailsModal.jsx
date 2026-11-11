@@ -18,6 +18,7 @@ import { isArray, isObject, isString } from 'lodash';
 
 /**
  * A Modal window to show password reset form
+  * @prop {bool} hideGroupUserInfo It is a flag from Login plugin (cfg.toolsCfg[0].hideGroupUserInfo): to show/hide user group in user details info, by default `false`
  */
 class UserDetails extends React.Component {
     static propTypes = {
@@ -26,7 +27,8 @@ class UserDetails extends React.Component {
         show: PropTypes.bool,
         options: PropTypes.object,
         onClose: PropTypes.func,
-        includeCloseButton: PropTypes.bool
+        includeCloseButton: PropTypes.bool,
+        hideGroupUserInfo: PropTypes.bool
     };
 
     static defaultProps = {
@@ -35,30 +37,35 @@ class UserDetails extends React.Component {
         },
         onClose: () => {},
         options: {},
-        includeCloseButton: true
+        includeCloseButton: true,
+        hideGroupUserInfo: false
     };
 
     getUserInfo = () => {
-        return {
+        let mainUserInfo = {
             name: v => <strong>{v}</strong>,
             role: v => <strong>{this.capitalCase(v)}</strong>,
             email: v => <strong>{v}</strong>,
             company: v => <strong>{v}</strong>,
-            notes: v => <strong>{v}</strong>,
-            groups: groups => {
+            notes: v => <strong>{v}</strong>
+        };
+
+        if (!this.props.hideGroupUserInfo) {
+            mainUserInfo.groups = groups => {
                 const gr = isArray(groups) && [...groups] || groups.group && isArray(groups.group) && [...groups.group] || groups.group && isObject(groups.group) && [{...groups.group}];
                 return gr && gr.map(group => {
-                    return group.groupName && <div key={group.groupName}><strong>{group.groupName}</strong></div> || null;
+                    return group.groupName && <div className="user-group-info" key={group.groupName}><strong>{group.groupName}</strong></div> || null;
                 }).filter(v => v) || null;
-            }
-        };
+            };
+        }
+        return mainUserInfo;
     }
 
     renderAttributes = () => {
-        if (this.props.user && this.props.user.attribute) {
+        if (this.props.user) {
             const userAttributes = getUserAttributes(this.props.user);
-            if (userAttributes && userAttributes.length > 0) {
-                const userInfo = this.getUserInfo();
+            const userInfo = this.getUserInfo();
+            if (userInfo) {
                 const attributesObj = userAttributes.reduce((a, b) => b.nam !== 'UUID' ? {...a, [b.name]: b.value } : {...a}, {});
                 const params = {...this.props.user, ...attributesObj};
                 const generalAttributes = Object.keys(userInfo)

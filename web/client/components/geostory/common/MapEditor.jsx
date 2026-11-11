@@ -31,6 +31,7 @@ import Message from '../../I18N/Message';
 
 import MapConfiguratorTabs from './map/MapConfiguratorTabs';
 import withMapConfiguratorTabs from './enhancers/withMapConfiguratorTabs';
+import set from 'lodash/fp/set';
 
 
 const StepHeader = ({title, description}) => (
@@ -83,12 +84,11 @@ const MapEditor = ({
                         </Col>
                     </Row>
                     <Toolbar
-                        transitionProps={false}
                         btnGroupProps={{
                             className: "ms-geostory-map-editor-toolbar"
                         }}
                         btnDefaultProps={{
-                            className: "square-button-md no-border",
+                            className: "square-button no-border",
                             bsStyle: "primary",
                             noTooltipWhenDisabled: true
                         }}
@@ -102,7 +102,15 @@ const MapEditor = ({
                         closeNodeEditor={closeNodeEditor}
                         editNode={editNode}
                         map={map}
-                        onChange={onChange}/>
+                        onChange={(path, value) => {
+                            const config = set(path, value, { map });
+                            const { layers, groups } = config?.map || {};
+                            if (path.includes('map.layers[')) {
+                                onChangeMap('layers', layers, "replace");
+                            } else {
+                                onChangeMap('groups', groups, "replace");
+                            }
+                        }}/>
                 ] ||
                 [
                     <MapConfigurator

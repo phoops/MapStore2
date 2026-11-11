@@ -57,7 +57,7 @@ import {
     CHANGE_TEXT,
     TOGGLE_ADVANCED_SETTINGS,
     toggleAdvancedSettings,
-    TOGGLE_THUMBNAIL,
+    SET_THUMBNAIL_FLAG,
     toggleThumbnail,
     TOGGLE_TEMPLATE,
     toggleTemplate,
@@ -72,7 +72,9 @@ import {
     SET_FORMAT_OPTIONS,
     setSupportedFormats, addLayerAndDescribe, ADD_LAYER_AND_DESCRIBE,
     INIT_PLUGIN,
-    initPlugin
+    initPlugin,
+    updateCatalogServices,
+    UPDATE_CATALOG_SERVICES
 } from '../catalog';
 
 import { SHOW_NOTIFICATION } from '../notifications';
@@ -153,7 +155,7 @@ describe('Test correctness of the catalog actions', () => {
         expect(retval.service).toBe(service);
     });
     it('deleteService', () => {
-        var retval = deleteService(status);
+        var retval = deleteService();
 
         expect(retval).toExist();
         expect(retval.type).toBe(DELETE_SERVICE);
@@ -254,6 +256,14 @@ describe('Test correctness of the catalog actions', () => {
         expect(retval.type).toBe(ADD_CATALOG_SERVICE);
         expect(retval.service).toBe(service);
     });
+    it('updateCatalogServices', () => {
+        const services = [{}];
+        var retval = updateCatalogServices(services);
+
+        expect(retval).toExist();
+        expect(retval.type).toBe(UPDATE_CATALOG_SERVICES);
+        expect(retval.services).toEqual(services);
+    });
     it('resetCatalog', () => {
         var retval = resetCatalog();
         expect(retval).toExist();
@@ -343,9 +353,15 @@ describe('Test correctness of the catalog actions', () => {
         const action = toggleTemplate();
         expect(action.type).toBe(TOGGLE_TEMPLATE);
     });
-    it('test toggleThumbnail action', () => {
-        const action = toggleThumbnail();
-        expect(action.type).toBe(TOGGLE_THUMBNAIL);
+    it('test toggleThumbnail action if toggleValue = true', () => {
+        const action = toggleThumbnail(true);
+        expect(action.type).toBe(SET_THUMBNAIL_FLAG);
+        expect(action.toggleValue).toEqual(true);
+    });
+    it('test toggleThumbnail action if toggleValue = false', () => {
+        const action = toggleThumbnail(false);
+        expect(action.type).toBe(SET_THUMBNAIL_FLAG);
+        expect(action.toggleValue).toEqual(false);
     });
     it('test changeMetadataTemplate action', () => {
         const action = changeMetadataTemplate("${title}");

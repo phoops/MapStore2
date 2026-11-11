@@ -8,6 +8,7 @@
 
 import Proj4js from 'proj4';
 import { getConfigProp } from './ConfigUtils';
+import axios from '../libs/ajax';
 
 const proj4 = Proj4js;
 
@@ -22,6 +23,51 @@ const DEFAULT_PROJECTIONS = {
         extent: [-180.0, -90.0, 180.0, 90.0],
         worldExtent: [-180.0, -90.0, 180.0, 90.0]
     }
+};
+
+/**
+ * Registers grid files for coordinate transformations
+ * @param {object} gridFiles - Object containing grid file definitions
+ * @param {object} proj4Instance - Proj4 instance
+ * @return {Promise} Promise that resolves when all grids are registered
+ */
+export const registerGridFiles = (gridFiles, proj4Instance) => {
+    const gridPromises = Object.entries(gridFiles).map(([gridName, gridInfo]) => {
+        return new Promise((resolve) => {
+            if (gridInfo.type === 'gsb') {
+                // GSB files: Load as ArrayBuffer and register directly
+                axios.get(gridInfo.path, { responseType: 'arraybuffer' })
+                    .then(response => {
+                        proj4Instance.nadgrid(gridName, response.data, {includeErrorFields: false});
+                        resolve();
+                    })
+                    .catch(error => {
+                        console.error(`Failed to register grid ${gridName}:`, error);
+                        resolve(); // Continue with other grids even if one fails
+                    });
+
+            } else if (gridInfo.type === 'geotiff') {
+                // GeoTIFF files: Use GeoTIFF.js library
+                import('geotiff').then(({ fromUrl }) => {
+                    return fromUrl(gridInfo.path);
+                }).then(tiff => {
+                    return proj4Instance.nadgrid(gridName, tiff).ready;
+                }).then(() => {
+                    // eslint-disable-next-line no-console
+                    console.log("Successfully registered");
+                    resolve();
+                }).catch(error => {
+                    console.error(`Failed to register grid ${gridName}:`, error);
+                    resolve(); // Continue with other grids even if one fails
+                });
+            } else {
+                console.warn(`Unknown grid type for ${gridName}: ${gridInfo.type}`);
+                resolve(); // Unknown grid type, skip
+            }
+        });
+    });
+
+    return Promise.all(gridPromises);
 };
 
 /**
@@ -56,3 +102,57 @@ export const getProjection = (code = 'EPSG:3857') => {
  * @return {boolean} true if the projection is available
  */
 export const isProjectionAvailable = (code) => !!getProjections()[code];
+
+/**
+ * Build a list of available projections starting from `filterAllowedCRS`
+ * and `additionalCRS` configuration, using the same structure adopted by
+ * the `availableProjections` config of the `CRSSelector` plugin.
+ *
+ * @param {string[]} filterAllowedCRS array of CRS codes, e.g. ['EPSG:4326', 'EPSG:3857']
+ * @param {object} additionalCRS object of extra CRS definitions keyed by code,
+ *  e.g. { 'EPSG:3003': { label: 'Monte Mario' } }
+ * @returns {{ value: string, label: string }[]} list of projections
+ *
+ * The resulting array contains unique CRS codes. The label resolution logic is:
+ *  - use `additionalCRS[code].label` if present
+ *  - otherwise use the CRS code itself
+ */
+export const getAvailableProjectionsFromConfig = (filterAllowedCRS = [], additionalCRS = {}) => {
+    const codesSet = new Set([
+        ...(filterAllowedCRS || []),
+        ...Object.keys(additionalCRS || {})
+    ]);
+
+    return Array.from(codesSet).map((code) => ({
+        value: code,
+        label: additionalCRS?.[code]?.label || code
+    }));
+};
+
+/**
+ * @param {array} projectionList - array of available projections list
+ * @param {array} projectionDefs - array of additional projection definitions
+ * @returns {array} array of available projections
+ */
+export const getAvailableProjections = (projectionList = [], projectionDefs = []) => {
+    const list = [];
+    const addedCodes = new Set();
+    // Add projections from projectionList
+    for (const projection of projectionList) {
+        if (projection && projection.value) {
+            list.push(projection);
+            addedCodes.add(projection.value);
+        }
+    }
+    // Add projections from projectionDefs, skipping duplicates (if any present)
+    for (const projection of projectionDefs) {
+        if (projection && projection.code && !addedCodes.has(projection.code)) {
+            list.push({
+                value: projection.code,
+                label: projection?.label || projection?.code
+            });
+            addedCodes.add(projection.code);
+        }
+    }
+    return list;
+};

@@ -39,6 +39,8 @@ const togglePopover = props$ =>
                 }))
         ).startWith({});
 
+const ButtonWithTooltip = tooltip(RButton);
+
 /**
  * Combine render props with ones coming from the stream
  */
@@ -61,13 +63,16 @@ const withTempHintPopover = () =>
                 })
             )
         ),
-        branch(({ popoverOptions }) => popoverOptions, withPopover, tooltip)
+        branch(({ popoverOptions }) => popoverOptions,
+            withPopover,
+            () => (props) => <ButtonWithTooltip {...props}/>
+        )
     );
 
 const Button = withTempHintPopover()(RButton);
 const ToggleButton = (props) => (<Button
     {...props}
-    bsSize="xsmall"
+    className="square-button"
 ><Glyphicon glyph="time" /></Button>);
 
 /**

@@ -39,6 +39,18 @@ const COMPARISON_TESTS = [
         expected: '<ogc:PropertyIsLike matchCase="true" wildCard="*" singleChar="." escapeChar="!"><ogc:PropertyName>PROP</ogc:PropertyName><ogc:Literal>a</ogc:Literal></ogc:PropertyIsLike>'
     },
     {
+        cql: "PROP ilike 'a'",
+        expected: '<ogc:PropertyIsLike matchCase="false" wildCard="*" singleChar="." escapeChar="!"><ogc:PropertyName>PROP</ogc:PropertyName><ogc:Literal>a</ogc:Literal></ogc:PropertyIsLike>'
+    },
+    {
+        cql: "strToLowerCase(PROP) LIKE 'Mtn'",
+        expected: '<ogc:PropertyIsLike matchCase="false" wildCard="*" singleChar="." escapeChar="!"><ogc:PropertyName>PROP</ogc:PropertyName><ogc:Literal>mtn</ogc:Literal></ogc:PropertyIsLike>'
+    },
+    {
+        cql: "strToLowerCase(SUB_REGION) LIKE '%Mtn%'",
+        expected: '<ogc:PropertyIsLike matchCase="false" wildCard="*" singleChar="." escapeChar="!"><ogc:PropertyName>SUB_REGION</ogc:PropertyName><ogc:Literal>*mtn*</ogc:Literal></ogc:PropertyIsLike>'
+    },
+    {
         cql: "PROP between 1 and 3",
         expected: '<ogc:PropertyIsBetween><ogc:PropertyName>PROP</ogc:PropertyName><ogc:LowerBoundary><ogc:Literal>1</ogc:Literal></ogc:LowerBoundary><ogc:UpperBoundary><ogc:Literal>3</ogc:Literal></ogc:UpperBoundary></ogc:PropertyIsBetween>'
     }
@@ -104,6 +116,9 @@ const LOGICAL = [
 const CQL_SPECIFIC = [{
     cql: "INCLUDE",
     expected: ""
+}, {
+    cql: "EXCLUDE",
+    expected: "<ogc:PropertyIsEqualTo><ogc:Literal>1</ogc:Literal><ogc:Literal>0</ogc:Literal></ogc:PropertyIsEqualTo>"
 }];
 
 const FUNCTIONS = [
@@ -172,6 +187,33 @@ const FUNCTIONS = [
 
 const REAL_WORLD = [
     // real world example
+    {
+        cql: "P1 = 'V1' AND P2 = 'V3' OR P1 = 'V1' AND P2 = 'V3'",
+        expected:
+            '<ogc:Or>'
+                + '<ogc:And>'
+                    + '<ogc:PropertyIsEqualTo>'
+                        + '<ogc:PropertyName>P1</ogc:PropertyName>'
+                        + '<ogc:Literal>V1</ogc:Literal>'
+                    + '</ogc:PropertyIsEqualTo>'
+                    + '<ogc:PropertyIsEqualTo>'
+                        + '<ogc:PropertyName>P2</ogc:PropertyName>'
+                        + '<ogc:Literal>V3</ogc:Literal>'
+                    + '</ogc:PropertyIsEqualTo>'
+                + '</ogc:And>'
+                + '<ogc:And>'
+                    + '<ogc:PropertyIsEqualTo>'
+                        + '<ogc:PropertyName>P1</ogc:PropertyName>'
+                        + '<ogc:Literal>V1</ogc:Literal>'
+                    + '</ogc:PropertyIsEqualTo>'
+                    + '<ogc:PropertyIsEqualTo>'
+                        + '<ogc:PropertyName>P2</ogc:PropertyName>'
+                        + '<ogc:Literal>V3</ogc:Literal>'
+                    + '</ogc:PropertyIsEqualTo>'
+                + '</ogc:And>'
+            + '</ogc:Or>'
+
+    },
     {
         cql: "( DTINCID <= '1789-07-13' AND DTINCID >= '1492-10-11' ) AND (DOW='1') AND (TPINCID='1')",
         expected:

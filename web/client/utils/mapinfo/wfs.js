@@ -15,8 +15,12 @@ import { optionsToVendorParams } from '../VendorParamsUtils';
 import { describeFeatureType, getFeature } from '../../api/WFS';
 import { extractGeometryAttributeName } from '../WFSLayerUtils';
 
+
 import {addAuthenticationToSLD} from '../SecurityUtils';
-import assign from 'object-assign';
+
+// if the url uses following constant means the whole workflow is managed client side
+// and prevent request to a service
+const CLIENT_WORKFLOW = 'client';
 
 /**
  * Creates the request object and it's metadata for WFS GetFeature to simulate GetFeatureInfo.
@@ -29,10 +33,11 @@ import assign from 'object-assign';
 const buildRequest = (layer, { map = {}, point, currentLocale, params, maxItems = 10 } = {}, infoFormat, viewer, featureInfo) => {
     if (point?.intersectedFeatures) {
         const { features = [] } = point?.intersectedFeatures?.find(({ id }) => id === layer.id) || {};
+        const isRemote = infoFormat === 'text/html';
         return {
             request: {
                 features: [...features],
-                outputFormat: 'application/json'
+                outputFormat: isRemote ? 'text/html' : 'application/json'
             },
             metadata: {
                 title: isObject(layer.title)
@@ -43,7 +48,7 @@ const buildRequest = (layer, { map = {}, point, currentLocale, params, maxItems 
                 viewer,
                 featureInfo
             },
-            url: 'client'
+            url: isRemote ? layer.url : CLIENT_WORKFLOW
         };
     }
     /* In order to create a valid feature info request
@@ -62,7 +67,7 @@ const buildRequest = (layer, { map = {}, point, currentLocale, params, maxItems 
             typeName: layer.name,
             srs: normalizeSRS(map.projection) || 'EPSG:4326',
             feature_count: maxItems,
-            ...assign({ params })
+            ...Object.assign({ params })
         }, layer),
         metadata: {
             title: isObject(layer.title) ? layer.title[currentLocale] || layer.title.default : layer.title,
@@ -93,9 +98,21 @@ const getIdentifyGeometry = point => {
 
 export default {
     buildRequest,
-    getIdentifyFlow: (layer, baseURL, defaultParams) => {
-        const { point, features, ...baseParams} = defaultParams;
+    getIdentifyFlow: (layer = {}, baseURL, defaultParams) => {
+        const { point, features, ...baseParams } = defaultParams || {};
         if (features) {
+            if (baseURL && baseURL !== CLIENT_WORKFLOW) {
+                const filterIdsCQL = `IN (${features.map(feature => `'${feature.id}'`).join(',')})`;
+                const params = optionsToVendorParams({
+                    layerFilter: layer?.layerFilter,
+                    params: {
+                        ...layer.baseParams,
+                        ...layer.params,
+                        ...baseParams
+                    }
+                }, filterIdsCQL);
+                return Observable.defer(() => getFeature(baseURL, layer.name, params, {_msAuthSourceId: layer?.security?.sourceId}));
+            }
             return Observable.of({
                 data: {
                     features
@@ -116,8 +133,12 @@ export default {
                         }
 
                     },
-                    params: assign({}, layer.baseParams, layer.params, baseParams)
+                    params: {
+                        ...layer.baseParams,
+                        ...layer.params,
+                        ...baseParams
+                    }
                 });
-                return getFeature(baseURL, layer.name, params);
+                return getFeature(baseURL, layer.name, params, {_msAuthSourceId: layer?.security?.sourceId});
             }));
     }};

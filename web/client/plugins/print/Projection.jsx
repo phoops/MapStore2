@@ -1,36 +1,66 @@
-import React, {useEffect} from "react";
+import React, {useEffect, useRef} from "react";
 import PropTypes from "prop-types";
 import {connect} from "react-redux";
 
 import {createPlugin} from "../../utils/PluginsUtils";
-import {addMapTransformer, addValidator, mapProjectionSelector} from "../../utils/PrintUtils";
+import {addMapTransformer, addValidator, getPrintScales, mapProjectionSelector} from "../../utils/PrintUtils";
 import { setPrintParameter } from "../../actions/print";
 import printReducer from "../../reducers/print";
+import { currentZoomLevelSelector } from "../../selectors/map";
 import Choice from "../../components/print/Choice";
 import { getMessageById } from '../../utils/LocaleUtils';
 import {getScales, reprojectZoom} from "../../utils/MapUtils";
 
 import { getAvailableCRS, normalizeSRS } from '../../utils/CoordinatesUtils';
 
-export const projectionSelector = (state) => state?.print?.spec?.params?.projection ?? state?.print?.map?.projection ?? "EPSG:3857";
+/**
+ * Returns the projection for print: from spec params, then map, then defaultProjection.
+ * defaultProjection is used only if it exists in getAvailableCRS(); otherwise falls back to EPSG:3857.
+ */
+export const projectionSelector = (state, defaultProjection) => {
+    const fromState = state?.print?.spec?.params?.projection ?? state?.print?.map?.projection;
+    if (fromState) return fromState;
+    const availableCRS = getAvailableCRS();
+    const candidate = defaultProjection ?? "EPSG:3857";
+    return Object.prototype.hasOwnProperty.call(availableCRS, candidate) ? candidate : "EPSG:3857";
+};
 
-function mapTransformer(state, map) {
-    const projection = projectionSelector(state);
-    const mapProjection = mapProjectionSelector(state);
-    const srs = normalizeSRS(projection);
-    const mapSrs = normalizeSRS(mapProjection);
-    if (srs !== mapSrs) {
-        const zoom = reprojectZoom(map.scaleZoom, mapSrs, srs);
-        const scales = getScales(srs);
-        return {
-            ...map,
-            zoom: zoom,
-            scaleZoom: zoom,
-            scale: scales[zoom],
-            projection: srs
-        };
-    }
-    return map;
+function createMapTransformer(srsRef) {
+    return function mapTransformer(state, map) {
+        const projection = projectionSelector(state);
+        const srs = normalizeSRS(projection);
+        const mapProjection = mapProjectionSelector(state);
+        const mapSrs = normalizeSRS(mapProjection);
+        const useFixed = map.useFixedScales && !map.editScale;
+
+        const zoomSrs = srsRef.current || mapSrs;
+        let zoom = map.zoom;
+        if (zoomSrs !== srs) {
+            const actualMapZoom = currentZoomLevelSelector(state);
+            const zoomToReproject = srsRef.current ? map.zoom : actualMapZoom;
+            zoom = reprojectZoom(zoomToReproject, zoomSrs, srs);
+        }
+        srsRef.current = srs;
+
+        let scale;
+        if (useFixed) {
+            const capabilities = state?.print?.capabilities;
+            const printScales = getPrintScales(capabilities);
+            scale = printScales[map.scaleZoom];
+        } else {
+            scale = getScales(srs)[zoom];
+        }
+
+        if (srs !== mapSrs) {
+            return {
+                ...map,
+                scale,
+                zoom,
+                projection: srs
+            };
+        }
+        return {...map, scale, zoom};
+    };
 }
 
 const validator = (allowPreview) => (state) => {
@@ -59,23 +89,27 @@ export const Projection = ({
     onChangeParameter,
     allowPreview = false,
     projections,
-    enabled = true,
-    onRefresh = () => {}
+    enabled = true
 }, context) => {
     useEffect(() => {
         if (enabled) {
             addValidator("projection", "map-preview", validator(allowPreview));
         }
     }, [allowPreview]);
-    useEffect(() => {
-        if (enabled) {
-            addMapTransformer("projection", mapTransformer);
-        }
-    }, []);
     function changeProjection(crs) {
         onChangeParameter("params.projection", crs);
-        onRefresh();
     }
+    const printSrsRef = useRef(null);
+    useEffect(() => {
+        if (enabled) {
+            changeProjection(projection);
+            addMapTransformer("projection", createMapTransformer(printSrsRef));
+        }
+        return () => {
+            printSrsRef.current = null;
+        };
+    }, []);
+
     return enabled ? (
         <>
             <Choice
@@ -106,6 +140,7 @@ Projection.contextTypes = {
  * by default. You can enable it again by setting this option to true.
  * @prop {object[]} cfg.projections optional list of projections to offer ({name: <description>, value: "EPSG:3003"})
  * is filtered by the available CRS in MapStore configuration.
+ * @prop {string} cfg.defaultProjection default projection when the print dialog opens; should be one of the values from projections list.
  *
  * @example
  * // include the widget in the Print plugin right-panel container, after resolution
@@ -120,16 +155,17 @@ Projection.contextTypes = {
  *   },
  *   "cfg": {
  *      "allowPreview": true,
- *      "projections": [{"name": "WGS84", "value": "EPSG:4326"}, {"name": "Mercator", "value": "EPSG:3857"}]
+ *      "projections": [{"name": "WGS84", "value": "EPSG:4326"}, {"name": "Mercator", "value": "EPSG:3857"}],
+ *      "defaultProjection": "EPSG:4326"
  *   }
  * }
  */
 export default createPlugin("PrintProjection", {
     component: connect(
-        (state) => ({
+        (state, ownProps) => ({
             spec: state?.print?.spec || {},
             map: state?.print?.map,
-            projection: projectionSelector(state),
+            projection: projectionSelector(state, ownProps?.defaultProjection),
             items: Object.keys(getAvailableCRS()).map(p => ({
                 name: p,
                 value: p

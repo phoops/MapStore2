@@ -38,6 +38,7 @@ export const CHANGE_SERVICE_FORMAT = 'CATALOG:CHANGE_SERVICE_FORMAT';
 export const FOCUS_SERVICES_LIST = 'CATALOG:FOCUS_SERVICES_LIST';
 export const CHANGE_URL = 'CATALOG:CHANGE_URL';
 export const ADD_CATALOG_SERVICE = 'CATALOG:ADD_CATALOG_SERVICE';
+export const UPDATE_CATALOG_SERVICES = 'CATALOG:UPDATE_CATALOG_SERVICES';
 export const DELETE_CATALOG_SERVICE = 'CATALOG:DELETE_CATALOG_SERVICE';
 export const ADD_SERVICE = 'CATALOG:ADD_SERVICE';
 export const DELETE_SERVICE = 'CATALOG:DELETE_SERVICE';
@@ -47,7 +48,7 @@ export const GET_METADATA_RECORD_BY_ID = 'CATALOG:GET_METADATA_RECORD_BY_ID';
 export const SET_LOADING = 'CATALOG:SET_LOADING';
 export const SHOW_FORMAT_ERROR = 'CATALOG:SHOW_FORMAT_ERROR';
 export const TOGGLE_TEMPLATE = 'CATALOG:TOGGLE_TEMPLATE';
-export const TOGGLE_THUMBNAIL = 'CATALOG:TOGGLE_THUMBNAIL';
+export const SET_THUMBNAIL_FLAG = 'CATALOG:SET_THUMBNAIL_FLAG';
 export const TOGGLE_ADVANCED_SETTINGS = 'CATALOG:TOGGLE_ADVANCED_SETTINGS';
 export const FORMAT_OPTIONS_FETCH = 'CATALOG:FORMAT_OPTIONS_FETCH';
 export const FORMAT_OPTIONS_LOADING = 'CATALOG:FORMAT_OPTIONS_LOADING';
@@ -184,6 +185,16 @@ export function addCatalogService(service) {
         service
     };
 }
+/**
+ *
+ * @param {object[]} services list of services to full replace catalog ones
+ */
+export function updateCatalogServices(services) {
+    return {
+        type: UPDATE_CATALOG_SERVICES,
+        services
+    };
+}
 export function deleteCatalogService(service) {
     return {
         type: DELETE_CATALOG_SERVICE,
@@ -283,7 +294,7 @@ export function getMetadataRecordById(metadataOptions) {
 export const changeMetadataTemplate = (metadataTemplate) => ({type: CHANGE_METADATA_TEMPLATE, metadataTemplate});
 export const toggleAdvancedSettings = () => ({type: TOGGLE_ADVANCED_SETTINGS});
 export const toggleTemplate = () => ({type: TOGGLE_TEMPLATE});
-export const toggleThumbnail = () => ({type: TOGGLE_THUMBNAIL});
+export const toggleThumbnail = (currentVal) => ({type: SET_THUMBNAIL_FLAG, toggleValue: currentVal});
 export const formatOptionsFetch = (url, force) => ({type: FORMAT_OPTIONS_FETCH, url, force});
 export const formatsLoading = (loading) => ({type: FORMAT_OPTIONS_LOADING, loading});
 export const setSupportedFormats = (formats, url) => ({type: SET_FORMAT_OPTIONS, formats, url});

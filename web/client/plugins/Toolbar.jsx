@@ -10,21 +10,11 @@ import React from 'react';
 
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import { CSSTransitionGroup } from 'react-transition-group';
 import { isFeatureGridOpen } from '../selectors/featuregrid';
-import { mapLayoutValuesSelector } from '../selectors/maplayout';
+import { boundingMapRectLayoutValuesSelector } from '../selectors/maplayout';
 import { createSelector } from 'reselect';
-import assign from 'object-assign';
 import ToolsContainer from './containers/ToolsContainer';
 
-class AnimatedContainer extends React.Component {
-    render() {
-        const {children, ...props} = this.props;
-        return (<CSSTransitionGroup {...props} transitionName="toolbarexpand" transitionEnterTimeout={500} transitionLeaveTimeout={300}>
-            {children}
-        </CSSTransitionGroup>);
-    }
-}
 // only for tests
 class NormalContainer extends React.Component {
     render() {
@@ -105,13 +95,13 @@ class Toolbar extends React.Component {
                 || hidableItems.length === 1 // if the item is only one, the expander will not show, instead we have only the item
                 || this.props.allVisible) // expanded state, all items are visible, no filtering.
             .filter(item => item.showWhen ? item.showWhen(this.props) : true) // optional display option (used by expander, that depends on other)
-            .map((item, index) => assign({}, item, {position: item.position || index}));
+            .map((item, index) => Object.assign({}, item, {position: item.position || index}));
         return unsorted.sort((a, b) => a.position - b.position);
     };
 
     render() {
-        const Container = this.props.disableAnimation ? NormalContainer : AnimatedContainer;
-        return (<ToolsContainer id={this.props.id} className={"mapToolbar btn-group-" + this.props.layout}
+        const Container = NormalContainer;
+        return (<ToolsContainer id={this.props.id} className={`mapToolbar ${this.props.layout === 'horizontal' ? 'btn-group' : 'btn-group-' + this.props.layout}`}
             toolCfg={this.props.btnConfig}
             container={Container}
             toolStyle={this.props.buttonStyle}
@@ -132,7 +122,7 @@ const toolbarSelector = stateSelector => createSelector([
     state => state.controls && state.controls[stateSelector] && state.controls[stateSelector].active,
     state => state.controls && state.controls[stateSelector] && state.controls[stateSelector].expanded,
     isFeatureGridOpen,
-    state => mapLayoutValuesSelector(state, {right: true, bottom: true})
+    state => boundingMapRectLayoutValuesSelector(state, { right: true })
 ], (active, allVisible, featuregridOpen, style) => ({
     active,
     allVisible,

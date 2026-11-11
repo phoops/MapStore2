@@ -16,6 +16,7 @@ import { Message } from '../../../../components/I18N/I18N';
 import AboutContent from './AboutContent';
 import aboutImg from '../../../assets/img/Blank.gif';
 import VersionInfo from './VersionInfo';
+import Portal from '../../../../components/misc/Portal';
 
 
 class About extends React.Component {
@@ -29,7 +30,9 @@ class About extends React.Component {
         commit: PropTypes.string,
         message: PropTypes.string,
         date: PropTypes.string,
-        onClose: PropTypes.func
+        onClose: PropTypes.func,
+        showAboutContent: PropTypes.bool,
+        showVersionInfo: PropTypes.bool
     };
 
     static defaultProps = {
@@ -45,7 +48,9 @@ class About extends React.Component {
         },
         withButton: true,
         enabled: false,
-        onClose: () => {}
+        onClose: () => {},
+        showAboutContent: true,
+        showVersionInfo: true
     };
 
     render() {
@@ -60,28 +65,28 @@ class About extends React.Component {
                         btnType="image"
                         className="map-logo"
                         body={<>
-                            <VersionInfo
+                            {this.props.showVersionInfo && <VersionInfo
                                 version={this.props.version}
                                 message={this.props.message}
                                 commit={this.props.commit}
                                 date={this.props.date}
                                 githubUrl={this.props.githubUrl}
-                            />
-                            <AboutContent/>
+                            />}
+                            {this.props.showAboutContent && <AboutContent/>}
                         </>
                         }
                     />
                 );
             }
             return (
-                <Dialog
+                <Portal><Dialog
                     id="mapstore-about"
-                    style={{zIndex: 1992}}
+                    style={{zIndex: 1992, paddingTop: 0}}
                     modal
                     draggable
                 >
                     <span role="header">
-                        <span className="about-panel-title">
+                        <span className="modal-title about-panel-title">
                             <Message msgId="about_title"/>
                         </span>
                         <button onClick={this.props.onClose} className="about-panel-close close">
@@ -89,16 +94,16 @@ class About extends React.Component {
                         </button>
                     </span>
                     <div role="body">
-                        <VersionInfo
+                        {this.props.showVersionInfo && <VersionInfo
                             version={this.props.version}
                             message={this.props.message}
                             commit={this.props.commit}
                             date={this.props.date}
                             githubUrl={this.props.githubUrl}
-                        />
-                        <AboutContent/>
+                        />}
+                        {this.props.showAboutContent && <AboutContent/>}
                     </div>
-                </Dialog>
+                </Dialog></Portal>
             );
         }
         return null;

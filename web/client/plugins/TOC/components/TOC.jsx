@@ -34,6 +34,7 @@ import {
  * @prop {string} filterText filter to apply to layers title
  * @prop {string} theme layers tree theme, one of undefined or `legend`
  * @prop {string} className additional class name for the layer tree
+ * @prop {array} nodeContentItems list of node content component to customize specific content available after expanding the node, expected structure [ { name, Component } ]
  * @prop {array} nodeItems list of node component to customize specific nodes, expected structure [ { name, Component, selector } ]
  * @prop {array} nodeToolItems list of node tool component to customize specific tool available on a node, expected structure [ { name, Component } ]
  * @prop {object} singleDefaultGroup if true it hides the default group nodes
@@ -53,6 +54,7 @@ import {
  * @prop {object} config.groupOptions.tooltipOptions options for group title tooltip
  * @prop {object} config.layerOptions specific options for layer nodes
  * @prop {object} config.layerOptions.tooltipOptions options for layer title tooltip
+ * @prop {boolean} config.layerOptions.enableDynamicLegend make the legend dynamic
  * @prop {boolean} config.layerOptions.hideLegend hide the legend of the layer
  * @prop {object} config.layerOptions.legendOptions additional options for WMS legend
  * @prop {boolean} config.layerOptions.hideFilter hide the filter button in the layer nodes
@@ -74,8 +76,10 @@ export function ControlledTOC({
     className,
     nodeItems,
     nodeToolItems,
+    nodeContentItems,
     singleDefaultGroup,
-    theme
+    theme,
+    getNodeStyle
 }) {
     return (
         <LayersTree
@@ -100,7 +104,9 @@ export function ControlledTOC({
             config={config}
             nodeItems={nodeItems}
             nodeToolItems={nodeToolItems}
+            nodeContentItems={nodeContentItems}
             singleDefaultGroup={singleDefaultGroup}
+            getNodeStyle={getNodeStyle}
         />
     );
 }
@@ -108,6 +114,7 @@ export function ControlledTOC({
 /**
  * TOC component that supports map configuration
  * @prop {object} map map configuration
+ * @prop {function} onChangeNode return the changed node configuration
  * @prop {function} onChangeMap return the changed map configuration
  * @prop {array} selectedNodes list of selected node identifiers
  * @prop {function} onSelectNode return the current selected node on click event
@@ -115,6 +122,7 @@ export function ControlledTOC({
  * @prop {string} className additional class name for the layer tree
  * @prop {array} nodeItems list of node component to customize specific nodes, expected structure [ { name, Component, selector } ]
  * @prop {array} nodeToolItems list of node tool component to customize specific tool available on a node, expected structure [ { name, Component } ]
+ * @prop {array} nodeContentItems list of node content component to customize specific content available after expanding the node, expected structure [ { name, Component } ]
  * @prop {object} singleDefaultGroup if true it hides the default group nodes
  * @prop {object} config optional configuration available for the nodes
  * @prop {number} config.resolution map resolution
@@ -132,21 +140,25 @@ export function ControlledTOC({
  * @prop {object} config.groupOptions.tooltipOptions options for group title tooltip
  * @prop {object} config.layerOptions specific options for layer nodes
  * @prop {object} config.layerOptions.tooltipOptions options for layer title tooltip
+ * @prop {boolean} config.layerOptions.enableDynamicLegend make the legend dynamic
  * @prop {boolean} config.layerOptions.hideLegend hide the legend of the layer
  * @prop {object} config.layerOptions.legendOptions additional options for WMS legend
  * @prop {boolean} config.layerOptions.hideFilter hide the filter button in the layer nodes
  */
 function TOC({
     map = { layers: [], groups: [] },
+    onChangeNode = () => {},
     onChangeMap = () => {},
     selectedNodes = [],
     onSelectNode = () => {},
     config,
     className,
     nodeToolItems,
+    nodeContentItems,
     singleDefaultGroup,
     nodeItems,
-    theme
+    theme,
+    filterText
 }) {
     const { layers } = splitMapAndLayers(map) || {};
     const tree = denormalizeGroups(layers.flat || [], layers.groups || []).groups;
@@ -173,6 +185,7 @@ function TOC({
         }
     }
     function handleUpdateNode(nodeId, nodeType, options) {
+        onChangeNode(nodeId, nodeType, options);
         const updatedNode = changeNodeConfiguration({
             groups: layers.groups,
             layers: layers.flat
@@ -188,13 +201,26 @@ function TOC({
             className={className}
             theme={theme}
             tree={tree}
+            filterText={filterText}
             selectedNodes={selectedNodesIdsToObject(selectedNodes, layers.flat, tree)}
             onSelectNode={onSelectNode}
             onSort={handleOnSort}
             onChange={handleUpdateNode}
-            config={config}
+            config={{
+                ...config,
+                layerOptions: {
+                    ...config?.layerOptions,
+                    legendOptions: {
+                        ...config?.layerOptions?.legendOptions,
+                        mapSize: map?.size,
+                        mapBbox: map?.bbox,
+                        projection: map?.projection
+                    }
+                }
+            }}
             nodeItems={nodeItems}
             nodeToolItems={nodeToolItems}
+            nodeContentItems={nodeContentItems}
             singleDefaultGroup={singleDefaultGroup}
         />
     );

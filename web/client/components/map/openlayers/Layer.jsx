@@ -10,7 +10,6 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import Layers from '../../../utils/openlayers/Layers';
 import {normalizeSRS, reprojectBbox, getExtentFromNormalized, isBboxCompatible, getPolygonFromExtent} from '../../../utils/CoordinatesUtils';
-import assign from 'object-assign';
 import Rx from 'rxjs';
 import isNumber from 'lodash/isNumber';
 import isArray from 'lodash/isArray';
@@ -148,7 +147,7 @@ export default class OpenlayersLayer extends React.Component {
                 maxZoom: !isNil(minResolution) ? getZoomFromResolution(minResolution, resolutions) : undefined
             })
         };
-        return assign({}, options, isNumber(position) ? {zIndex: position} : null, {
+        return Object.assign({}, options, isNumber(position) ? {zIndex: position} : null, {
             srs,
             onError: () => {
                 this.props.onCreationError(options);
@@ -169,9 +168,10 @@ export default class OpenlayersLayer extends React.Component {
                 const parentMap = this.props.map;
                 const mapExtent = parentMap && parentMap.getView().getProjection().getExtent();
                 const layerExtent = options && options.bbox && options.bbox.bounds;
+                const layerExtentCRS = options && options.bbox && options.bbox.crs;
                 const mapBboxPolygon = mapExtent && reprojectBbox(mapExtent, this.props.srs, 'EPSG:4326');
                 let layerBboxPolygon = layerExtent && reprojectBbox(
-                    getExtentFromNormalized(layerExtent, this.props.srs).extent,
+                    getExtentFromNormalized(layerExtent, layerExtentCRS || this.props.srs).extent,
                     'EPSG:4326'
                 );
                 if (layerBboxPolygon && layerBboxPolygon.length === 2 && isArray(layerBboxPolygon[1])) {
@@ -329,7 +329,7 @@ export default class OpenlayersLayer extends React.Component {
             if (options.refresh) {
                 let counter = 0;
                 this.refreshTimer = setInterval(() => {
-                    this.layer.getSource().updateParams(assign({}, options.params, {_refreshCounter: counter++}));
+                    this.layer.getSource().updateParams(Object.assign({}, options.params, {_refreshCounter: counter++}));
                 }, options.refresh);
             }
         }

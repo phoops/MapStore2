@@ -18,11 +18,13 @@ export const spatialOperators = {
 export const functionOperator = "func";
 export const patterns = {
     INCLUDE: /^INCLUDE$/,
+    EXCLUDE: /^EXCLUDE$/,
     PROPERTY: /^"?[_a-zA-Z"]\w*"?/,
-    COMPARISON: /^(=|<>|<=|<|>=|>|LIKE)/i,
-    IS_NULL: /^IS NULL/i,
+    COMPARISON: /^(=|<>|<=|<|>=|>|LIKE|ILIKE)/i,
+    IS_NULL: /^IS\s+NULL/i,
     COMMA: /^,/,
-    LOGICAL: /^(AND|OR)/i,
+    AND: /^(AND)/i,
+    OR: /^(OR)/i,
     VALUE: /^('([^']|'')*'|-?\d+(\.\d*)?|\.\d+|true|false)/i,
     LPAREN: /^\(/,
     RPAREN: /^\)/,
@@ -31,10 +33,17 @@ export const patterns = {
     BETWEEN: /^BETWEEN/i,
     FUNCTION: /^[_a-zA-Z][_a-zA-Z1-9]*(?=\()/,
     GEOMETRY: (text) => {
-        let type = /^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)/.exec(text);
+        // Unified regex: optional SRID + geometry type
+        const match = /^(?:SRID=\d+;)?(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)/i.exec(text);
+        let type = null;
+        let startIdx = 0;
+        if (match) {
+            type = match[1].toUpperCase();
+            startIdx = match[0].length;
+        }
         if (type) {
             let len = text.length;
-            let idx = text.indexOf("(", type[0].length);
+            let idx = text.indexOf("(", startIdx);
             if (idx > -1) {
                 let depth = 1;
                 while (idx < len && depth > 0) {
@@ -59,16 +68,18 @@ export const patterns = {
 };
 const follows = {
     INCLUDE: ['END'],
-    LPAREN: ['GEOMETRY', 'SPATIAL', 'FUNCTION', 'PROPERTY', 'VALUE', 'LPAREN', 'RPAREN', 'NOT'],
-    RPAREN: ['NOT', 'LOGICAL', 'END', 'RPAREN', 'COMMA', 'COMPARISON', 'BETWEEN', 'IS_NULL'],
+    EXCLUDE: ['END'],
+    LPAREN: ['GEOMETRY', 'SPATIAL', 'FUNCTION', 'NOT', 'PROPERTY', 'VALUE', 'LPAREN', 'RPAREN'],
+    RPAREN: ['NOT', 'AND', 'OR', 'END', 'RPAREN', 'COMMA', 'COMPARISON', 'BETWEEN', 'IS_NULL'],
     PROPERTY: ['COMPARISON', 'BETWEEN', 'COMMA', 'IS_NULL', 'RPAREN'],
     BETWEEN: ['VALUE'],
-    IS_NULL: ['END'],
+    IS_NULL: ['AND', 'OR', 'COMMA', 'RPAREN', 'END'],
     COMPARISON: ['VALUE', 'FUNCTION'],
     COMMA: ['GEOMETRY', 'FUNCTION', 'VALUE', 'PROPERTY'],
-    VALUE: ['LOGICAL', 'COMMA', 'RPAREN', 'END'],
+    VALUE: ['AND', 'OR', 'COMMA', 'RPAREN', 'END'],
     SPATIAL: ['LPAREN'],
-    LOGICAL: ['NOT', 'VALUE', 'SPATIAL', 'FUNCTION', 'PROPERTY', 'LPAREN'],
+    AND: ['NOT', 'VALUE', 'SPATIAL', 'FUNCTION', 'PROPERTY', 'LPAREN'],
+    OR: ['NOT', 'VALUE', 'SPATIAL', 'FUNCTION', 'PROPERTY', 'LPAREN'],
     NOT: ['PROPERTY', 'LPAREN'],
     GEOMETRY: ['COMMA', 'RPAREN'],
     FUNCTION: ['LPAREN', 'FUNCTION', 'VALUE', 'PROPERTY']
@@ -94,14 +105,18 @@ const logical = {
     'NOT': "not"
 };
 const cql = {
-    "INCLUDE": "include"
+    "INCLUDE": "include",
+    "EXCLUDE": "exclude"
 };
 
 const precedence = {
-    'RPAREN': 3,
-    'LOGICAL': 2,
-    'COMPARISON': 1
+    'RPAREN': 4,
+    'OR': 3,
+    'AND': 2,
+    'COMPARISON': 1,
+    'IS_NULL': 1
 };
+
 const tryToken = (text, pattern) => {
     if (pattern instanceof RegExp) {
         return pattern.exec(text);
@@ -144,7 +159,7 @@ const nextToken = (text, tokens) => {
 const tokenize = (text) => {
     let results = [];
     let token;
-    const expect = ["INCLUDE", "NOT", "GEOMETRY",  "SPATIAL", "FUNCTION", "PROPERTY", "LPAREN"];
+    const expect = ["EXCLUDE", "INCLUDE", "NOT", "GEOMETRY",  "SPATIAL", "FUNCTION", "PROPERTY", "LPAREN"];
     let text2 = text;
     let expect2 = expect;
     do {
@@ -180,9 +195,10 @@ const buildAst = (tokens) => {
         case "BETWEEN":
         case "IS_NULL":
         case "INCLUDE":
-        case "LOGICAL":
+        case "EXCLUDE":
+        case "AND":
+        case "OR":
             let p = precedence[tok.type];
-
             while (operatorStack.length > 0 &&
                     (precedence[operatorStack[operatorStack.length - 1].type] <= p)
             ) {
@@ -244,7 +260,8 @@ const buildAst = (tokens) => {
     function buildTree() {
         let tok = postfix.pop();
         switch (tok.type) {
-        case "LOGICAL":
+        case "AND":
+        case "OR":
             let rhs = buildTree();
             let lhs = buildTree();
             return ({
@@ -305,7 +322,11 @@ const buildAst = (tokens) => {
                 type: "property",
                 name: tok.text
             });
-
+        case "EXCLUDE": {
+            return ({
+                type: cql.EXCLUDE
+            });
+        }
         case "INCLUDE": {
             return ({
                 type: cql.INCLUDE
@@ -432,7 +453,6 @@ const buildAst = (tokens) => {
  * @memberof utils.ogc.Filter.CQL.parser
  * @name read
  * @param cqlFilter the cql_filter o parse
- * @return a javascript representation of the filter.
+ * @return {object} a javascript representation of the filter.
  */
 export const read = (text) => buildAst(tokenize(text));
-

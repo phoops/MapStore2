@@ -19,10 +19,13 @@ import {
     deleteWidget,
     editWidget,
     exportCSV,
-    exportImage,
     selectWidget,
     updateWidgetProperty,
-    toggleMaximize
+    toggleMaximize,
+    replaceLayoutView,
+    replaceWidgets,
+    setSelectedLayoutViewId,
+    setLinkedDashboardData
 } from '../actions/widgets';
 import Dashboard from '../components/dashboard/Dashboard';
 import widgetsReducers from '../reducers/widgets';
@@ -31,7 +34,9 @@ import {
     isBrowserMobile,
     isDashboardLoading,
     showConnectionsSelector,
-    isDashboardAvailable
+    isDashboardAvailable,
+    dashboardTitleSelector,
+    buttonCanEdit
 } from '../selectors/dashboard';
 import { currentLocaleLanguageSelector, currentLocaleSelector } from '../selectors/locale';
 import { isLocalizedLayerStylesEnabledSelector, localizedLayerStylesEnvSelector } from '../selectors/localizedLayerStyles';
@@ -42,14 +47,18 @@ import {
     getEditingWidget,
     getWidgetsDependenciesGroups,
     isWidgetSelectionActive,
-    getMaximizedState
+    getMaximizedState,
+    getSelectedLayoutId
 } from '../selectors/widgets';
 import dashboardReducers from '../reducers/dashboard';
 import dashboardEpics from '../epics/dashboard';
 import widgetsEpics from '../epics/widgets';
+import interactionsEpics from '../epics/interactions';
 import GlobalSpinner from '../components/misc/spinners/GlobalSpinner/GlobalSpinner';
 import { createPlugin } from '../utils/PluginsUtils';
 import { canTableWidgetBeDependency } from '../utils/WidgetsUtils';
+import usePluginItems from '../hooks/usePluginItems';
+import { userSelector } from '../selectors/security';
 
 const WidgetsView = compose(
     connect(
@@ -70,33 +79,48 @@ const WidgetsView = compose(
             getMaximizedState,
             currentLocaleSelector,
             isDashboardAvailable,
+            getSelectedLayoutId,
+            buttonCanEdit,
+            userSelector,
             (resource, widgets, layouts, dependencies, selectionActive, editingWidget, groups, showGroupColor, loading, isMobile, currentLocaleLanguage, isLocalizedLayerStylesEnabled,
-                env, maximized, currentLocale, isDashboardOpened) => ({
+                env, maximized, currentLocale, isDashboardOpened, selectedLayoutId, edit, user) => ({
                 resource,
                 loading,
-                canEdit: isMobile ? !isMobile : resource && !!resource.canEdit,
+                canEdit: edit,
                 layouts,
                 dependencies,
                 selectionActive,
                 editingWidget,
-                widgets: !isEmpty(maximized) ? widgets.filter(w => w.id === maximized.widget.id) : widgets,
+                widgets: !isEmpty(maximized) && Array.isArray(maximized.widget) && maximized.widget.some(w => w.layoutId === selectedLayoutId)
+                    ? widgets.filter(w => maximized.widget.some(mw => mw.id === w.id))
+                    : widgets,
                 groups,
                 showGroupColor,
                 language: isLocalizedLayerStylesEnabled ? currentLocaleLanguage : null,
                 env,
-                maximized,
+                maximized: !isEmpty(maximized) && (
+                    (Array.isArray(maximized.widget)
+                        ? maximized.widget.every(w => w.layoutId !== selectedLayoutId)
+                        : maximized.widget.layoutId !== selectedLayoutId
+                    )
+                ) ? {} : maximized,
                 currentLocale,
-                isDashboardOpened
+                isDashboardOpened,
+                selectedLayoutId,
+                user
             })
         ), {
             editWidget,
             updateWidgetProperty,
             exportCSV,
-            exportImage,
             deleteWidget,
             onWidgetSelected: selectWidget,
             onLayoutChange: changeLayout,
-            toggleMaximize
+            toggleMaximize,
+            onLayoutViewReplace: replaceLayoutView,
+            onWidgetsReplace: replaceWidgets,
+            onLayoutViewSelected: setSelectedLayoutViewId,
+            onLinkedDashboardDataLoad: setLinkedDashboardData
         }
     ),
     withProps(() => ({
@@ -150,24 +174,64 @@ const WidgetsView = compose(
  *      }
  *   }
  * }
+ * @prop {object} cfg.configureViewOptions options to pass to the configure view
+ * @prop {object} cfg.configureViewOptions.query query parameters to pass to the configure view
+ * @prop {object} cfg.configureViewOptions.resourcesType resources type to pass to the configure view
+ * @example
+ * {
+ *   "name": "Dashboard",
+ *   "cfg": {
+ *      "configureViewOptions": {
+ *         "query": {
+ *            "filter": "dashboard"
+ *         },
+ *         "resourcesType": ["DASHBOARD"]
+ *      }
+ *   }
+ * }
  */
 class DashboardPlugin extends React.Component {
     static propTypes = {
+        items: PropTypes.array,
         enabled: PropTypes.bool,
         rowHeight: PropTypes.number,
         cols: PropTypes.object,
         minLayoutWidth: PropTypes.number,
         widgetOpts: PropTypes.object,
-        enableZoomInTblWidget: PropTypes.bool
+        enableZoomInTblWidget: PropTypes.bool,
+        dashboardTitle: PropTypes.string,
+        configureViewOptions: PropTypes.object
     };
     static defaultProps = {
         enabled: true,
         minLayoutWidth: 480,
-        enableZoomInTblWidget: true
+        enableZoomInTblWidget: true,
+        configureViewOptions: {
+            resourcesType: ["DASHBOARD"]
+        }
     };
+    componentDidMount() {
+        let isExistingDashboardResource = this.props?.did;
+        if (isExistingDashboardResource) {
+            this.oldDocumentTitle = document.title;
+        }
+    }
+    componentDidUpdate() {
+        let isExistingDashboardResource = this.props?.did;
+        if (this.props.dashboardTitle && isExistingDashboardResource) {
+            document.title = this.props.dashboardTitle;
+        }
+    }
+    componentWillUnmount() {
+        let isExistingDashboardResource = this.props?.did;
+        if (isExistingDashboardResource) {
+            document.title = this.oldDocumentTitle;
+        }
+    }
     render() {
         return this.props.enabled
             ? <WidgetsView
+                items={this.props.items}
                 width={this.props.width}
                 height={this.props.height}
                 rowHeight={this.props.rowHeight}
@@ -175,14 +239,28 @@ class DashboardPlugin extends React.Component {
                 minLayoutWidth={this.props.minLayoutWidth}
                 enableZoomInTblWidget={this.props.enableZoomInTblWidget}
                 widgetOpts={this.props.widgetOpts}
+                isDashboardWidget
+                configureViewOptions={this.props.configureViewOptions}
             />
             : null;
 
     }
 }
 
+const DashboardComponentWrapper = (props, context) => {
+    const { loadedPlugins } = context;
+    const items = usePluginItems({ items: props.items, loadedPlugins })
+        .filter(({ target }) => target === 'menu');
+
+    return <DashboardPlugin {...props} items={items}/>;
+};
+
+DashboardComponentWrapper.contextTypes = {
+    loadedPlugins: PropTypes.object
+};
+
 export default createPlugin("Dashboard", {
-    component: withResizeDetector(DashboardPlugin),
+    component: connect((state) => ({dashboardTitle: dashboardTitleSelector(state)}))(withResizeDetector(DashboardComponentWrapper)),
     reducers: {
         dashboard: dashboardReducers,
         widgets: widgetsReducers
@@ -199,6 +277,7 @@ export default createPlugin("Dashboard", {
     },
     epics: {
         ...dashboardEpics,
-        ...widgetsEpics
+        ...widgetsEpics,
+        ...interactionsEpics
     }
 });

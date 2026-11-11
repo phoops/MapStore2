@@ -19,6 +19,7 @@ const {
     updateGroupSelectedMetadataExplorerEpic,
     newCatalogServiceAdded
 } = catalog(API);
+import { ZOOM_TO_EXTENT } from '../../actions/map';
 import {SHOW_NOTIFICATION} from '../../actions/notifications';
 import {SET_CONTROL_PROPERTY, toggleControl} from '../../actions/controls';
 import {ADD_LAYER, CHANGE_LAYER_PROPERTIES, selectNode, SHOW_LAYER_METADATA} from '../../actions/layers';
@@ -190,6 +191,44 @@ describe('catalog Epics', () => {
                 flat: [{
                     id: "TEST",
                     catalogURL: "base/web/client/test-resources/csw/getRecordsResponseException.xml"
+                }]
+            }
+        });
+    });
+    it('autoSearchEpic - wms with domain aliases', (done) => {
+        const NUM_ACTIONS = 1;
+        const domainAliases = ['url1', 'url2'];
+        testEpic(autoSearchEpic, NUM_ACTIONS, changeText(""), (actions) => {
+            expect(actions.length).toBe(NUM_ACTIONS);
+            expect(actions[0].type).toBe(TEXT_SEARCH);
+            expect(actions[0].url).toBe("url,url1,url2");
+            expect(actions[0].options).toEqual({
+                service: {
+                    type: "wms",
+                    url: "url",
+                    filter: "test",
+                    domainAliases
+                }
+            });
+            done();
+        }, {
+            catalog: {
+                delayAutoSearch: 50,
+                selectedService: "wmsCatalog",
+                services: {
+                    "wmsCatalog": {
+                        type: "wms",
+                        url: "url",
+                        filter: "test",
+                        domainAliases
+                    }
+                },
+                pageSize: 2
+            },
+            layers: {
+                selected: ["TEST"],
+                flat: [{
+                    id: "TEST"
                 }]
             }
         });
@@ -1024,7 +1063,7 @@ describe('catalog Epics', () => {
         });
     });
 
-    describe('addLayerAndDescribeEpic wfs layer', () => {
+    describe('addLayerAndDescribeEpic wfs and arcgis layers', () => {
 
         beforeEach(done => {
             mockAxios = new MockAdapter(axios);
@@ -1204,6 +1243,110 @@ describe('catalog Epics', () => {
                             expect(true).toBe(false);
                         }
                     });
+                    done();
+                }, {});
+        });
+
+        it('should send request with arcgis layer with name and options layers', (done) => {
+            const layer = {
+                type: 'arcgis',
+                url: '/arcgis/rest/services/Map/MapServer',
+                title: 'Map',
+                description: 'MapServer',
+                visibility: true,
+                name: '1'
+            };
+            mockAxios.onGet().reply(() => ([200, {
+                extent: {
+                    xmin: -119.97727829597589,
+                    ymin: 34.75019112370114,
+                    xmax: -119.10884666994308,
+                    ymax: 35.69641644201112,
+                    spatialReference: {
+                        wkid: 4326,
+                        latestWkid: 4326
+                    }
+                }
+            }]));
+            const NUM_ACTIONS = 2;
+            testEpic(addTimeoutEpic(addLayerAndDescribeEpic, 0), NUM_ACTIONS,
+                addLayerAndDescribe(layer),
+                (actions) => {
+                    try {
+                        expect(actions.map(action => action.type)).toEqual([
+                            ADD_LAYER,
+                            ZOOM_TO_EXTENT
+                        ]);
+                    } catch (e) {
+                        done(e);
+                    }
+                    done();
+                }, {});
+        });
+
+        it('should send request with arcgis layer without name and options layers', (done) => {
+            const layer = {
+                type: 'arcgis',
+                url: '/arcgis/rest/services/Map/MapServer',
+                title: 'Map',
+                description: 'MapServer',
+                visibility: true
+            };
+            mockAxios.onGet().reply(() => ([200, {
+                layers: [],
+                currentVersion: 10.91,
+                serviceDescription: 'Description',
+                capabilities: 'Map,Query,Data',
+                supportedImageFormatTypes: 'PNG32,PNG24,PNG,JPG,DIB,TIFF,EMF,PS,PDF,GIF,SVG,SVGZ,BMP',
+                fullExtent: {
+                    xmin: -119.97727829597589,
+                    ymin: 34.75019112370114,
+                    xmax: -119.10884666994308,
+                    ymax: 35.69641644201112,
+                    spatialReference: {
+                        wkid: 4326,
+                        latestWkid: 4326
+                    }
+                }
+            }]));
+            const NUM_ACTIONS = 2;
+            testEpic(addTimeoutEpic(addLayerAndDescribeEpic, 0), NUM_ACTIONS,
+                addLayerAndDescribe(layer),
+                (actions) => {
+                    try {
+                        expect(actions.map(action => action.type)).toEqual([
+                            ADD_LAYER,
+                            ZOOM_TO_EXTENT
+                        ]);
+                    } catch (e) {
+                        done(e);
+                    }
+                    done();
+                }, {});
+        });
+
+        it('should not send request with arcgis layer without name and options layers', (done) => {
+            const layer = {
+                type: 'arcgis',
+                url: '/arcgis/rest/services/Map/MapServer',
+                title: 'Map',
+                description: 'MapServer',
+                visibility: true,
+                options: {
+                    layers: [{ id: 1 }]
+                }
+            };
+            const NUM_ACTIONS = 1;
+            testEpic(addTimeoutEpic(addLayerAndDescribeEpic, 0), NUM_ACTIONS,
+                addLayerAndDescribe(layer),
+                (actions) => {
+                    try {
+                        expect(actions.map(action => action.type)).toEqual([
+                            ADD_LAYER
+                        ]);
+                    } catch (e) {
+                        done(e);
+                    }
                     done();
                 }, {});
         });

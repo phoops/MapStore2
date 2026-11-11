@@ -52,11 +52,12 @@ import {
     catalogSearchInfoSelector,
     isActiveSelector, servicesSelectorWithBackgrounds
 } from '../selectors/catalog';
-import { metadataSourceSelector } from '../selectors/backgroundselector';
+import { metadataSourceSelector, stashedServiceSelector } from '../selectors/backgroundselector';
 import { currentMessagesSelector } from "../selectors/locale";
 import { getSelectedLayer, selectedNodesSelector } from '../selectors/layers';
 
 import {
+    buildServiceUrl,
     buildSRSMap,
     extractOGCServicesReferences,
     updateServiceData
@@ -76,8 +77,10 @@ import { extractGeometryType } from '../utils/WFSLayerUtils';
 import { createDefaultStyle } from '../utils/StyleUtils';
 import { removeDuplicateLines } from '../utils/StringUtils';
 import { logError } from '../utils/DebugUtils';
-import { isProjectionAvailable } from '../utils/ProjectionUtils';
+import { getCustomTileGridProperties } from '../utils/WMSUtils';
 import {getLayerTileMatrixSetsInfo} from '../api/WMTS';
+import { getLayerMetadata } from '../api/ArcGIS';
+import { flatGeobufExtractGeometryType } from '../utils/FlatGeobufLayerUtils';
 
 const onErrorRecordSearch = (isNewService, errObj) => {
     logError({message: errObj});
@@ -275,26 +278,14 @@ export default (API) => ({
                 if (layer.type === 'wms') {
                     // * fetch the api of cashe option if layer has 'remoteTileGrids' property with true value
                     return Rx.Observable.forkJoin(
-                        Rx.Observable.defer(() => describeLayers(getLayerUrl(layer), layer.name)),
+                        Rx.Observable.defer(() => describeLayers(getLayerUrl(layer), layer.name, layer.security)),
                         (!layer?.remoteTileGrids) ?
                             Rx.Observable.of(null) :
                             Rx.Observable.defer(() => getLayerTileMatrixSetsInfo(generateGeoServerWMTSUrl(layer), layer.name, layer))
                                 .catch(() => Rx.Observable.of(null))
                     )
                         .switchMap(([results, tileGridData]) => {
-                            let tileGridProperties = {};
-                            if (tileGridData) {
-                                const filteredTileGrids = tileGridData.tileGrids.filter(({ crs }) => isProjectionAvailable(CoordinatesUtils.normalizeSRS(crs)));
-                                tileGridProperties = tileGridData !== undefined ? {
-                                    tiled: true,
-                                    tileGrids: tileGridData.tileGrids,
-                                    tileGridStrategy: 'custom',
-                                    tileGridCacheSupport: filteredTileGrids?.length > 0 ?
-                                        tileGridData.formats ? {formats: tileGridData.formats} : {}
-                                        : undefined
-                                } : {};
-
-                            }
+                            const tileGridProperties = tileGridData ? getCustomTileGridProperties(tileGridData) : {};
                             if (results) {
                                 let description = find(results, (desc) => desc.name === layer.name );
                                 if (description && description.owsType === 'WFS') {
@@ -322,6 +313,21 @@ export default (API) => ({
                             const geometryType = ['Point', 'LineString', 'Polygon'].includes(extractedGeometryType)
                                 ? extractedGeometryType
                                 : 'GeometryCollection';
+                            return Rx.Observable.of(changeLayerProperties(id, {
+                                style: createDefaultStyle({ geometryType })
+                            }));
+                        })
+                        .merge(Rx.Observable.from(actions))
+                        .catch((e) => Rx.Observable.of(describeError(layer, e)));
+                }
+                if (layer.type === 'flatgeobuf') {
+                    return Rx.Observable.defer(() => describeFeatureType(layer.url, layer.name))
+                        .switchMap(() => {
+                            const extractedGeometryType = (flatGeobufExtractGeometryType(layer.metadata) || '').replace('Multi', '');
+                            const geometryType = ['Point', 'LineString', 'Polygon'].includes(extractedGeometryType)
+                                ? extractedGeometryType
+                                : 'GeometryCollection';
+
                             return Rx.Observable.of(changeLayerProperties(id, {
                                 style: createDefaultStyle({ geometryType })
                             }));
@@ -371,6 +377,20 @@ export default (API) => ({
                             })]
                         );
                     }
+                }
+                if (layer.type === 'arcgis' && (layer.name !== undefined || !layer?.options?.layers)) {
+                    return Rx.Observable.defer(() => getLayerMetadata(layer.url, layer.name))
+                        .switchMap(({ data, ...layerOptions }) => {
+                            const newLayer = {
+                                ...layer,
+                                ...layerOptions
+                            };
+                            return Rx.Observable.from([
+                                addNewLayer({...newLayer, id}),
+                                ...(newLayer.bbox ? [zoomToExtent(newLayer.bbox.bounds, newLayer.bbox.crs)] : [])
+                            ]);
+                        })
+                        .catch((e) => Rx.Observable.of(describeError(layer, e)));
                 }
                 return Rx.Observable.from(actions);
             })
@@ -580,8 +600,7 @@ export default (API) => ({
                 const state = getState();
                 const pageSize = pageSizeSelector(state);
                 const service = selectedCatalogSelector(state);
-                const { type, url } = service;
-                return Rx.Observable.of(textSearch({ format: type, url, startPosition: 1, maxRecords: pageSize, text, options: { service }}));
+                return Rx.Observable.of(textSearch({ format: service.type, url: buildServiceUrl(service), startPosition: 1, maxRecords: pageSize, text, options: { service }}));
             }),
 
     catalogCloseEpic: (action$, store) =>
@@ -589,13 +608,13 @@ export default (API) => ({
             .switchMap(() => {
                 const state = store.getState();
                 const metadataSource = metadataSourceSelector(state);
-                const services = servicesSelector(state);
+                const stashedService = stashedServiceSelector(state);
                 return Rx.Observable.of(...([
                     setControlProperties('metadataexplorer', "enabled", false, "group", null),
                     changeCatalogMode("view"),
                     resetCatalog()
                 ].concat(metadataSource === 'backgroundSelector' ?
-                    [changeSelectedService(head(keys(services))), allowBackgroundsDeletion(true)] : [])));
+                    [changeSelectedService(stashedService), allowBackgroundsDeletion(true)] : [])));
             }),
 
     /**

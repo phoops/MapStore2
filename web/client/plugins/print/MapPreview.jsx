@@ -3,11 +3,17 @@ import PropTypes from "prop-types";
 
 import MapPreviewComp from "../../components/print/MapPreview";
 import Message from "../../components/I18N/Message";
+import { getScales } from "../../utils/MapUtils";
+import { assign } from "lodash";
 
 export const MapPreview = ({mapSize, layout, layoutName, resolutions, useFixedScales,
     localizedLayerStylesEnv, mapPreviewOptions, mapType,
-    map, capabilities, onRefresh, validation = {valid: true}, ...rest}) => {
-    const scales = capabilities.scales.slice(0).reverse().map((scale) => parseFloat(scale.value)) || [];
+    map, capabilities, onRefresh, validation = {valid: true}, editScale, printMap, printSpec, ...rest}) => {
+    let printSpecState = printSpec && assign({}, printSpec, printMap || {});
+    const selectedPrintProjection = (printSpecState && printSpecState?.params?.projection) || (printSpecState && printSpecState?.projection) || (printMap && printMap.projection) || 'EPSG:3857';
+    const printCapabilitiesScales = capabilities.scales.slice(0).reverse().map((scale) => parseFloat(scale.value)) || [];
+    const projectedScales = getScales(selectedPrintProjection, map && map.mapOptions && map.mapOptions.view && map.mapOptions.view.DPI || null);
+    const scales = editScale ? projectedScales : useFixedScales ? printCapabilitiesScales : projectedScales;
     return validation.valid ? (
         <MapPreviewComp
             {...rest}
@@ -21,6 +27,7 @@ export const MapPreview = ({mapSize, layout, layoutName, resolutions, useFixedSc
             resolutions={resolutions}
             useFixedScales={useFixedScales}
             env={localizedLayerStylesEnv}
+            editScale={editScale}
             {...mapPreviewOptions}
         />
     ) : <div id="map-preview-disabled-message"><Message msgId="print.disabledpreview"/></div>;

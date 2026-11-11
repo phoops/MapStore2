@@ -145,8 +145,9 @@ import {getFeatureInfo} from "../api/identify";
 import {getFeatureSimple} from '../api/WFS';
 import {findNonGeometryProperty, findGeometryProperty} from '../utils/ogc/WFS/base';
 import toWKT from '../utils/ogc/WKT/toWKT';
+import { DEFAULT_PANEL_WIDTH } from '../utils/LayoutUtils';
 
-const OFFSET = 550;
+const OFFSET = DEFAULT_PANEL_WIDTH;
 const DEACTIVATE_ACTIONS = [
     changeDrawingStatus("stop"),
     changeDrawingStatus("clean", '', GPT_CONTROL_NAME)
@@ -486,7 +487,7 @@ export const runBufferProcessGPTEpic = (action$, store) => action$
         const counter = getCounter(layers, GPT_BUFFER_GROUP_ID);
         let misconfiguredLayers = [];
         if (!layerUrl) {
-            misconfiguredLayers.push(layer.name + " - " + layer.title);
+            misconfiguredLayers.push(layer.name === layer.title ? layer.name : layer.name + " - " + layer.title);
         }
         if (misconfiguredLayers.length) {
             return Rx.Observable.of(showErrorNotification({
@@ -678,12 +679,33 @@ export const runIntersectProcessGPTEpic = (action$, store) => action$
         const layer = getLayerFromIdSelector(state, layerId);
         const layers = availableLayersSelector(state);
         const layerUrl = wpsUrlSelector(state) || head(castArray(layer.url));
+
+        const intersectionLayerId = intersectionLayerIdSelector(state);
+        const intersectionLayer = getLayerFromIdSelector(state, intersectionLayerId);
+        const intersectionLayerUrl = wpsUrlSelector(state) || head(castArray(intersectionLayer.url));
+
         const sourceFeature = sourceFeatureSelector(state);
         const executeOptions = {};
         const intersectionFeature = intersectionFeatureSelector(state);
         const counter = getCounter(layers, GPT_INTERSECTION_GROUP_ID);
         let sourceFC$;
         let intersectionFC$;
+        let misconfiguredLayers = [];
+        if (!layerUrl) {
+            misconfiguredLayers.push(layer.name === layer.title ? layer.name : layer.name + " - " + layer.title);
+        }
+        if (!intersectionLayerUrl) {
+            misconfiguredLayers.push(intersectionLayer.name === intersectionLayer.title ? intersectionLayer.name : intersectionLayer.name + " - " + intersectionLayer.title);
+        }
+        if (misconfiguredLayers.length) {
+            return Rx.Observable.of(showErrorNotification({
+                title: "errorTitleDefault",
+                message: "GeoProcessing.notifications.errorMissingUrl",
+                autoDismiss: 6,
+                position: "tc",
+                values: {layerName: misconfiguredLayers.join(", ")}
+            }));
+        }
         if (isEmpty(sourceFeature)) {
             sourceFC$ = executeProcess(
                 layerUrl,
@@ -699,9 +721,7 @@ export const runIntersectProcessGPTEpic = (action$, store) => action$
         } else {
             sourceFC$ = Rx.Observable.of(sourceFeature.geometry);
         }
-        const intersectionLayerId = intersectionLayerIdSelector(state);
-        const intersectionLayer = getLayerFromIdSelector(state, intersectionLayerId);
-        const intersectionLayerUrl = wpsUrlSelector(state) || head(castArray(intersectionLayer.url));
+
         if (isEmpty(intersectionFeature)) {
             intersectionFC$ = executeProcess(
                 intersectionLayerUrl,
@@ -849,7 +869,7 @@ export const runIntersectProcessGPTEpic = (action$, store) => action$
                     })
                     .catch((e) => {
                         logError(e);
-                        let misconfiguredLayers = [];
+                        misconfiguredLayers = [];
                         if (!layerUrl) {
                             misconfiguredLayers.push(layer.name + " - " + layer.title);
                         }

@@ -15,6 +15,7 @@ import HTML5Backend from 'react-dnd-html5-backend';
 import { DragDropContext as dragDropContext } from 'react-dnd';
 import TestUtils from 'react-dom/test-utils';
 
+
 const Comp = dragDropContext(HTML5Backend)(Carousel);
 const [{contents}] = TEST_STORY.sections.filter(({type})=> type === 'carousel');
 describe('Carousel component', () => {
@@ -63,7 +64,7 @@ describe('Carousel component', () => {
         // Carousel toolbar
         const [toolbar] = el.getElementsByClassName('ms-content-toolbar');
         expect(toolbar).toExist();
-        const buttons = toolbar.querySelectorAll('.btn-group span button');
+        const buttons = toolbar.querySelectorAll('.btn-group button');
         expect(buttons.length).toBe(2);
         expect(buttons[0].querySelector('.glyphicon-plus')).toExist();
         expect(buttons[1].querySelector('.glyphicon-trash')).toExist();
@@ -71,7 +72,7 @@ describe('Carousel component', () => {
         // Carousel item toolbar
         const itemToolbar = container.querySelector('.ms-geo-carousel-item-wrapper .ms-content-toolbar');
         expect(itemToolbar).toBeTruthy();
-        const itemButtons = itemToolbar.querySelectorAll('.btn-group span button');
+        const itemButtons = itemToolbar.querySelectorAll('.btn-group button');
         expect(itemButtons.length).toBe(3);
         expect(itemButtons[0].querySelector('.glyphicon-pencil')).toExist();
         expect(itemButtons[1].querySelector('.glyphicon-trash')).toExist();
@@ -93,7 +94,7 @@ describe('Carousel component', () => {
         // Carousel toolbar
         const [toolbar] = el.getElementsByClassName('ms-content-toolbar');
         expect(toolbar).toExist();
-        const buttons = toolbar.querySelectorAll('.btn-group span button');
+        const buttons = toolbar.querySelectorAll('.btn-group button');
         expect(buttons.length).toBe(2);
         expect(buttons[0].classList.contains('disabled')).toBeTruthy();
         expect(buttons[1].classList.contains('disabled')).toBeFalsy();
@@ -101,7 +102,7 @@ describe('Carousel component', () => {
         // Carousel item toolbar
         const itemToolbar = container.querySelector('.ms-geo-carousel-item-wrapper .ms-content-toolbar');
         expect(itemToolbar).toBeTruthy();
-        const itemButtons = itemToolbar.querySelectorAll('.btn-group span button');
+        const itemButtons = itemToolbar.querySelectorAll('.btn-group button');
         expect(itemButtons.length).toBe(3);
         expect(itemButtons[0].classList.contains('disabled')).toBeFalsy();
         expect(itemButtons[1].classList.contains('disabled')).toBeTruthy();
@@ -176,7 +177,7 @@ describe('Carousel component', () => {
         // Carousel toolbar
         const [toolbar] = el.getElementsByClassName('ms-content-toolbar');
         expect(toolbar).toExist();
-        const buttons = toolbar.querySelectorAll('.btn-group span button');
+        const buttons = toolbar.querySelectorAll('.btn-group button');
         expect(buttons.length).toBe(2);
         const [addButton] = buttons;
         expect(addButton.querySelector('.glyphicon-plus')).toExist();
@@ -201,15 +202,16 @@ describe('Carousel component', () => {
         // Carousel toolbar
         const [toolbar] = el.getElementsByClassName('ms-content-toolbar');
         expect(toolbar).toExist();
-        const buttons = toolbar.querySelectorAll('.btn-group span button');
+        const buttons = toolbar.querySelectorAll('.btn-group button');
         expect(buttons.length).toBe(2);
         const removeButton = buttons[1];
         expect(removeButton.querySelector('.glyphicon-trash')).toExist();
         TestUtils.Simulate.click(removeButton);
-        const confirmDialog = document.querySelector('.modal-dialog');
-        expect(confirmDialog.style.display).toNotBe("none");
-        const confirmButton = confirmDialog.querySelector('.btn-group .btn');
-        TestUtils.Simulate.click(confirmButton);
+        const confirmDialog = document.querySelector('[role="dialog"]');
+        expect(confirmDialog).toExist();
+        const buttons_ = confirmDialog.querySelectorAll('.btn');
+        expect(buttons_.length).toBe(2);
+        TestUtils.Simulate.click(buttons_[1]);
         expect(spyRemove).toHaveBeenCalled();
         expect(spyRemove.calls[0].arguments[0]).toEqual('sections[{"id":"SomeID_carousel"}]');
     });
@@ -231,14 +233,15 @@ describe('Carousel component', () => {
         // Carousel item toolbar
         const itemToolbar = container.querySelectorAll('.ms-geo-carousel-item-wrapper .ms-content-toolbar');
         expect(itemToolbar.length).toBeTruthy();
-        const itemButtons = itemToolbar[1].querySelectorAll('.btn-group span button');
+        const itemButtons = itemToolbar[1].querySelectorAll('.btn-group button');
         expect(itemButtons.length).toBe(3);
         const removeButton = itemButtons[1];
         TestUtils.Simulate.click(removeButton);
-        const confirmDialog = document.querySelector('.modal-dialog');
-        expect(confirmDialog.style.display).toNotBe("none");
-        const confirmButton = confirmDialog.querySelector('.btn-group .btn');
-        TestUtils.Simulate.click(confirmButton);
+        const confirmDialog = document.querySelector('[role="dialog"]');
+        expect(confirmDialog).toExist();
+        const buttons_ = confirmDialog.querySelectorAll('.btn');
+        expect(buttons_.length).toBe(2);
+        TestUtils.Simulate.click(buttons_[1]);
         expect(spyRemove).toHaveBeenCalled();
         expect(spyRemove.calls[0].arguments[0]).toEqual('sections[{"id":"SomeID_carousel"}].contents[{"id":"ccol2"}]');
     });
@@ -260,7 +263,7 @@ describe('Carousel component', () => {
         // Carousel item toolbar
         const itemToolbar = container.querySelector('.ms-geo-carousel-item-wrapper .ms-content-toolbar');
         expect(itemToolbar).toBeTruthy();
-        const itemButtons = itemToolbar.querySelectorAll('.btn-group span button');
+        const itemButtons = itemToolbar.querySelectorAll('.btn-group button');
         expect(itemButtons.length).toBe(3);
         const markerButton = itemButtons[2];
         TestUtils.Simulate.click(markerButton);

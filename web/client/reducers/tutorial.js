@@ -17,7 +17,6 @@ import {
     TOGGLE_TUTORIAL
 } from '../actions/tutorial';
 
-import assign from 'object-assign';
 import React from 'react';
 import I18N from '../components/I18N/I18N';
 
@@ -33,18 +32,18 @@ const initialState = {
     id: '',
     presetList: {}
 };
-import { getApi } from '../api/userPersistedStorage';
-
+import { getApi, getItemKey } from '../api/userPersistedStorage';
+const STORAGE_SECTION = "plugin.tutorial";
 function tutorial(state = initialState, action) {
     switch (action.type) {
     case START_TUTORIAL:
-        return assign({}, state, {
+        return Object.assign({}, state, {
             run: true,
             start: true,
             status: 'run'
         });
     case INIT_TUTORIAL:
-        return assign({}, state, {
+        return Object.assign({}, state, {
             style: action.style,
             defaultStep: action.defaultStep,
             checkbox: action.checkbox,
@@ -54,14 +53,14 @@ function tutorial(state = initialState, action) {
         let setup = {};
         setup.steps = [].concat(action.steps);
         setup.id = action.id;
-        setup.checkbox = action.checkbox ? action.checkbox : assign({}, state.checkbox);
-        setup.style = action.style ? action.style : assign({}, state.style);
-        setup.defaultStep = action.defaultStep ? action.defaultStep : assign({}, state.defaultStep);
+        setup.checkbox = action.checkbox ? action.checkbox : Object.assign({}, state.checkbox);
+        setup.style = action.style ? action.style : Object.assign({}, state.style);
+        setup.defaultStep = action.defaultStep ? action.defaultStep : Object.assign({}, state.defaultStep);
         setup.disabled = false;
         setup.presetGroup = action.presetGroup;
         let isActuallyDisabled = false;
         try {
-            isActuallyDisabled = getApi().getItem('mapstore.plugin.tutorial.' + action.id + '.disabled') === 'true';
+            isActuallyDisabled = getApi().getItem(getItemKey(STORAGE_SECTION, action.id + '.disabled')) === 'true';
         } catch (e) {
             console.error(e);
         }
@@ -78,8 +77,8 @@ function tutorial(state = initialState, action) {
             text = (step.selector === '#intro-tutorial') && !isActuallyDisabled ? <div><div>{text}</div>{setup.checkbox}</div> : text;
             let style = (step.selector === '#intro-tutorial') ? setup.style : {};
             let isFixed = (step.selector === '#intro-tutorial') ? true : step.isFixed || false;
-            assign(style, step.style);
-            return assign({}, setup.defaultStep, step, {
+            Object.assign(style, step.style);
+            return Object.assign({}, setup.defaultStep, step, {
                 index,
                 title,
                 text,
@@ -104,7 +103,7 @@ function tutorial(state = initialState, action) {
             setup.steps = setup.steps.filter((step) => {
                 return step.selector !== '#intro-tutorial';
             }).map((step, index) => {
-                return assign({}, step, {index});
+                return Object.assign({}, step, {index});
             });
 
             setup.run = false;
@@ -112,7 +111,7 @@ function tutorial(state = initialState, action) {
             setup.status = 'close';
         }
 
-        return assign({}, state, setup);
+        return Object.assign({}, state, setup);
     case UPDATE_TUTORIAL:
         let update = {};
         update.steps = [].concat(action.steps);
@@ -130,7 +129,7 @@ function tutorial(state = initialState, action) {
                 update.steps = update.steps.filter((step) => {
                     return step.selector !== '#intro-tutorial';
                 }).map((step, index) => {
-                    return assign({}, step, {index});
+                    return Object.assign({}, step, {index});
                 });
             } else if (action.tour.type === 'error:target_not_found') {
                 update.status = 'error';
@@ -138,24 +137,24 @@ function tutorial(state = initialState, action) {
                 update.tourAction = action.tour.action;
             }
         }
-        return assign({}, state, update);
+        return Object.assign({}, state, update);
     case DISABLE_TUTORIAL:
         let disabled = !state.disabled;
         const presetGroup = state.presetGroup || [state.id];
 
         presetGroup.forEach(curId => {
             try {
-                getApi().setItem('mapstore.plugin.tutorial.' + curId + '.disabled', disabled);
+                getApi().setItem(getItemKey(STORAGE_SECTION,  curId + '.disabled'), disabled);
             } catch (e) {
                 console.error(e);
             }
         });
 
-        return assign({}, state, {
+        return Object.assign({}, state, {
             disabled
         });
     case RESET_TUTORIAL:
-        return assign({}, state, {
+        return Object.assign({}, state, {
             steps: [],
             run: false,
             start: false,
@@ -163,14 +162,14 @@ function tutorial(state = initialState, action) {
             enabled: false
         });
     case CLOSE_TUTORIAL:
-        return assign({}, state, {
+        return Object.assign({}, state, {
             run: false,
             start: false,
             status: 'close',
             enabled: false
         });
     case TOGGLE_TUTORIAL:
-        return assign({}, state, { enabled: !state.enabled });
+        return Object.assign({}, state, { enabled: !state.enabled });
     default:
         return state;
     }

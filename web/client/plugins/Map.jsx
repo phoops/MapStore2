@@ -9,7 +9,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { connect, createPlugin } from '../utils/PluginsUtils';
-import Spinner from 'react-spinkit';
 import './map/css/map.css';
 import Message from '../components/I18N/Message';
 import ConfigUtils from '../utils/ConfigUtils';
@@ -27,13 +26,14 @@ import additionalLayersReducer from "../reducers/additionallayers";
 import mapEpics from "../epics/map";
 import pluginsCreator from "./map/index";
 import withScalesDenominators from "../components/map/enhancers/withScalesDenominators";
-import { createFeatureFilter } from '../utils/FilterUtils';
+import { createVectorFeatureFilter } from '../utils/FilterUtils';
 import ErrorPanel from '../components/map/ErrorPanel';
 import catalog from "../epics/catalog";
 import backgroundSelector from "../epics/backgroundselector";
 import API from '../api/catalog';
 import { MapLibraries } from '../utils/MapTypeUtils';
 import {getHighlightLayerOptions} from "../utils/HighlightUtils";
+import Spinner from '../components/layout/Spinner';
 
 /**
  * The Map plugin allows adding mapping library dependent functionality using support tools.
@@ -162,6 +162,7 @@ import {getHighlightLayerOptions} from "../utils/HighlightUtils";
  * @prop {boolean} mapOptions.cesium.depthTestAgainstTerrain if true all primitive 3d features will be tested against the terrain while if false they will be drawn on top of the terrain even if hidden by it (default true)
  * @prop {number} mapOptions.cesium.maximumZoomDistance max zoom limit (in meter unit) to restrict the zoom out operation based on it
  * @prop {number} mapOptions.cesium.minimumZoomDistance  min zoom limit (in meter unit) to restrict the zoom in operation based on it
+ * @prop {boolean} mapOptions.cesium.enableImageryOverlay when true, enables draping of 2D imagery layers (WMS, TMS, WMTS) over 3D Tiles with sequential rendering in TOC order; this global setting is automatically applied to each 3D Tiles layer added to the map (default true)
  * @static
  * @example
  * // Adding a layer to be used as a source for the elevation (shown in the MousePosition plugin configured with showElevation = true)
@@ -211,7 +212,8 @@ class MapPlugin extends React.Component {
         items: PropTypes.array,
         onLoadingMapPlugins: PropTypes.func,
         onMapTypeLoaded: PropTypes.func,
-        pluginsCreator: PropTypes.func
+        pluginsCreator: PropTypes.func,
+        mapTitle: PropTypes.string
     };
 
     static defaultProps = {
@@ -251,10 +253,20 @@ class MapPlugin extends React.Component {
         onMapTypeLoaded: () => {},
         pluginsCreator
     };
-    state = {
-        canRender: true
-    };
 
+    state = {};
+    componentDidMount() {
+        let isMapResource = this.props?.mapId;
+        if (isMapResource) {
+            this.oldDocumentTitle = document.title;
+        }
+    }
+    componentDidUpdate() {
+        let isMapResource = this.props?.mapId;
+        if (this.props.mapTitle && isMapResource) {
+            document.title = this.props.mapTitle;
+        }
+    }
     UNSAFE_componentWillMount() {
         // moved the font load of FontAwesome only to styleParseUtils (#9653)
         this.updatePlugins(this.props);
@@ -269,6 +281,10 @@ class MapPlugin extends React.Component {
 
     componentWillUnmount() {
         this._isMounted = false;
+        let isMapResource = this.props?.mapId;
+        if (isMapResource) {
+            document.title = this.oldDocumentTitle;
+        }
     }
 
     getHighlightLayer = (projection, index, env) => {
@@ -344,7 +360,8 @@ class MapPlugin extends React.Component {
     renderLayerContent = (layer, projection) => {
         const plugins = this.state.plugins;
         if (layer.features) {
-            return layer.features.filter(createFeatureFilter(layer.filterObj)).map( (feature) => {
+            const vectorFeatureFilter = createVectorFeatureFilter(layer);
+            return layer.features.filter(vectorFeatureFilter).map((feature) => {
                 return (
                     <plugins.Feature
                         key={feature.id}
@@ -378,7 +395,7 @@ class MapPlugin extends React.Component {
     };
 
     render() {
-        if (this.props.map && this.state.canRender && this.state.plugins) {
+        if (this.isValidMapConfiguration(this.props.map) && this.state.plugins) {
             const {mapOptions = {}} = this.props.map;
 
             return (
@@ -413,9 +430,11 @@ class MapPlugin extends React.Component {
             height: "100%",
             display: "flex",
             justifyContent: "center",
-            alignItems: "center"
+            alignItems: "center",
+            gap: "0.5rem",
+            fontSize: "1rem"
         }} className="mapLoadingMessage">
-            {this.props.loadingSpinner ? <Spinner spinnerName="circle" overrideSpinnerClassName="spinner"/> : null}
+            {this.props.loadingSpinner ? <Spinner /> : null}
             <Message msgId={this.props.mapLoadingMessage}/>
         </div>);
     }
@@ -440,6 +459,15 @@ class MapPlugin extends React.Component {
             }
         });
     };
+    isValidMapConfiguration = (map) => {
+        // when the center is included inside the map config
+        // we know that the configuration has been loaded
+        // we should prevent to mount the map component
+        // in case we have a configuration like this one: { eventListeners: {}, mousePointer: '' }
+        // if we allow invalid configuration default props will be used instead
+        // initializing the map in the wrong position
+        return !!map?.center;
+    }
 }
 
 export default createPlugin('Map', {

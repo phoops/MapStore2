@@ -19,6 +19,8 @@ import {
 } from './common';
 import { THREE_D_TILES } from '../ThreeDTiles';
 import { MODEL } from '../Model';
+import { FGB } from '../FlatGeobuf';
+
 const getBaseCatalogUrl = (url) => {
     return url && url.replace(/\/csw$/, "/");
 };
@@ -120,13 +122,17 @@ function getBoundingBox(record) {
 }
 function getCatalogRecord3DTiles(record, metadata) {
     const dc = record.dc;
+    // dc?.URI can be an array
+    let dcURIs = castArray(dc?.URI);
+    const firstValidURI = dcURIs?.find(uri => uri?.value?.endsWith('.json'));
+    const url = firstValidURI?.value || "";
     return {
         serviceType: '3dtiles',
         isValid: true,
         description: dc && isString(dc.abstract) && dc.abstract || '',
         title: dc && isString(dc.title) && dc.title || '',
         identifier: dc && isString(dc.identifier) && dc.identifier || '',
-        url: dc?.URI?.value || "",
+        url,
         thumbnail: null,
         bbox: getBoundingBox(record),
         format: dc && dc.format || "",
@@ -267,7 +273,9 @@ export const getCatalogRecords = (records, options, locales) => {
             if (dc && dc.format === THREE_D_TILES) {
                 catRecord = getCatalogRecord3DTiles(record, metadata);
             } else if (dc && dc.format === MODEL) {
-                // todo: handle get catalog record for ifc
+                // todo: handle get catalog record for Ifc Model
+            } else if (dc && dc.format === FGB) {
+                // todo: handle get catalog record for FlatGeobuf
             } else {
                 const layerType = Object.keys(parsedReferences).filter(key => !ADDITIONAL_OGC_SERVICES.includes(key)).find(key => parsedReferences[key]);
                 const ogcReferences = layerType && layerType !== 'esri'

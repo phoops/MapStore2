@@ -60,11 +60,23 @@ const COMPARISON_TESTS = [
             args: [{type: "property", name: "PROP"}, {type: "literal", value: 'a'}],
             type: "like"
         }
+    }, {
+        cql: "PROP ilike 'a'",
+        expected: {
+            args: [{type: "property", name: "PROP"}, {type: "literal", value: 'a'}],
+            type: "ilike"
+        }
     },
     {
         cql: "INCLUDE",
         expected: {
             type: "include"
+        }
+    },
+    {
+        cql: "EXCLUDE",
+        expected: {
+            type: "exclude"
         }
     }
 ];
@@ -132,6 +144,49 @@ const LOGICAL = [
             "filters[1].filters[0].args[1].value": "a",
             "filters[1].filters[1].type": "not",
             "filters[1].filters[1].filters[0].args[0].name": "PROP2"
+        }
+    },
+    // operator precedence
+    {
+        cql: "P1 = 'P_VALUE_1' AND P2 = 'P2_VALUE_1' OR P1 = 'P_VALUE_2' AND P2 = 'P2_VALUE_2'",
+        expected: {
+            "type": "or",
+            "filters[0].type": "and",
+            "filters[0].filters[0].type": "=",
+            "filters[0].filters[0].args[0].name": "P1",
+            "filters[0].filters[0].args[1].value": "P_VALUE_1",
+            "filters[0].filters[1].type": "=",
+            "filters[0].filters[1].args[0].name": "P2",
+            "filters[0].filters[1].args[1].value": "P2_VALUE_1",
+            "filters[1].type": "and",
+            "filters[1].filters[0].type": "=",
+            "filters[1].filters[0].args[0].name": "P1",
+            "filters[1].filters[0].args[1].value": "P_VALUE_2",
+            "filters[1].filters[1].type": "=",
+            "filters[1].filters[1].args[0].name": "P2",
+            "filters[1].filters[1].args[1].value": "P2_VALUE_2"
+
+        }
+    },
+    // operator precedence with parenthesis
+    {
+        cql: "P1 = 'P_VALUE_1' OR P2 = 'P2_VALUE_1' AND P1 = 'P_VALUE_2' OR P2 = 'P2_VALUE_2'",
+        expected: { // transformed in ((P1 = P_VALUE_1) OR ((P2 = P2_VALUE_1) AND (P1 = P_VALUE_2))) OR (P2 = P2_VALUE_2)
+            "type": "or",
+            "filters[0].type": "or",
+            "filters[0].filters[0].type": "=",
+            "filters[0].filters[0].args[0].name": "P1",
+            "filters[0].filters[0].args[1].value": "P_VALUE_1",
+            "filters[0].filters[1].type": "and",
+            "filters[0].filters[1].filters[0].type": "=",
+            "filters[0].filters[1].filters[0].args[0].name": "P2",
+            "filters[0].filters[1].filters[0].args[1].value": "P2_VALUE_1",
+            "filters[0].filters[1].filters[1].type": "=",
+            "filters[0].filters[1].filters[1].args[0].name": "P1",
+            "filters[0].filters[1].filters[1].args[1].value": "P_VALUE_2",
+            "filters[1].type": "=",
+            "filters[1].args[0].name": "P2",
+            "filters[1].args[1].value": "P2_VALUE_2"
         }
     }
 ];
@@ -213,6 +268,112 @@ const WKT_TESTS = [
                         [[[1, 2], [3, 4], [5, 6], [1, 2]]],
                         [[[7, 8], [9, 10], [11, 12], [7, 8]]]
                     ]
+                }]
+        }
+    },
+    {
+        cql: "INTERSECTS(PROP1, SRID=3857;POINT(1 2))",
+        expected: {
+            type: "INTERSECTS",
+            args: [{
+                type: "property",
+                name: "PROP1"
+            }, {
+                type: "Point",
+                coordinates: [1, 2],
+                projection: "EPSG:3857"
+            }]
+        }
+    },
+    {
+        cql: "INTERSECTS(PROP1, SRID=4326;POLYGON((1 2, 3 4, 5 6, 1 2)))",
+        expected: {
+            type: "INTERSECTS",
+            args: [
+                {type: "property", name: "PROP1"}, {
+                    type: "Polygon",
+                    coordinates: [[[1, 2], [3, 4], [5, 6], [1, 2]]],
+                    projection: "EPSG:4326"
+                }]
+        }
+    },
+    {
+        cql: "INTERSECTS(PROP1, SRID=3857;LINESTRING(1 2, 3 4))",
+        expected: {
+            type: "INTERSECTS",
+            args: [{
+                type: "property",
+                name: "PROP1"
+            }, {
+                type: "LineString",
+                coordinates: [[1, 2], [3, 4]],
+                projection: "EPSG:3857"
+            }]
+        }
+    },
+    {
+        cql: "INTERSECTS(PROP1, SRID=3857;MULTIPOINT(1 2, 3 4))",
+        expected: {
+            type: "INTERSECTS",
+            args: [{type: "property", name: "PROP1"},
+                {
+                    type: "MultiPoint",
+                    coordinates: [[1, 2], [3, 4]],
+                    projection: "EPSG:3857"
+                }]
+        }
+    },
+    {
+        cql: "INTERSECTS(PROP1, SRID=4326;MULTILINESTRING((1 2, 3 4), (5 6, 7 8)))",
+        expected: {
+            type: "INTERSECTS",
+            args: [ {type: "property", name: "PROP1"}, {
+                type: "MultiLineString",
+                coordinates: [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                projection: "EPSG:4326"
+            }]
+        }
+    },
+    {
+        cql: "INTERSECTS(PROP1, SRID=3857;MULTIPOLYGON(((1 2, 3 4, 5 6, 1 2)), ((7 8, 9 10, 11 12, 7 8))))",
+        expected: {
+            type: "INTERSECTS",
+            args: [
+                {type: "property", name: "PROP1"},
+                {
+                    type: "MultiPolygon",
+                    coordinates: [
+                        [[[1, 2], [3, 4], [5, 6], [1, 2]]],
+                        [[[7, 8], [9, 10], [11, 12], [7, 8]]]
+                    ],
+                    projection: "EPSG:3857"
+                }]
+        }
+    },
+    // Case-insensitive SRID prefix
+    {
+        cql: "INTERSECTS(PROP1, srid=4326;POINT(1 2))",
+        expected: {
+            type: "INTERSECTS",
+            args: [{
+                type: "property",
+                name: "PROP1"
+            }, {
+                type: "Point",
+                coordinates: [1, 2],
+                projection: "EPSG:4326"
+            }]
+        }
+    },
+    {
+        cql: "INTERSECTS(PROP1, SRID=3857;polygon((1 2, 3 4, 5 6, 1 2)))",
+        expected: {
+            type: "INTERSECTS",
+            args: [
+                {type: "property", name: "PROP1"}, {
+                    type: "Polygon",
+                    coordinates: [[[1, 2], [3, 4], [5, 6], [1, 2]]],
+                    projection: "EPSG:3857"
                 }]
         }
     }
@@ -631,10 +792,11 @@ const REAL_WORLD = [
 ];
 const testRules = rules => rules.map(({ cql, expected }) => {
     it(`testing ${cql}`, () => {
+        let res;
         try {
-            const res = read(cql);
+            res = read(cql);
             Object.keys(expected).map(k => {
-                expect(get(res, k)).toEqual(expected[k]);
+                expect(get(res, k)).toEqual(expected[k], ([a, b]) => `from "${cql}" filter: \n\texpected:\n\t\t${JSON.stringify(b)} \n\tat "${k}"\n\tbut got: \n\t\t${JSON.stringify(a)}. \n full object output:\n\t\t${JSON.stringify(res)}`);
             });
         } catch (e) {
             throw e;

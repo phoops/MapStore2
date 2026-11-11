@@ -30,7 +30,9 @@ const serviceNew = {
     isNew: true
 };
 import catalog from '../catalog';
-
+import {
+    setCredentialsAction
+} from '../../actions/security';
 import {
     RECORD_LIST_LOADED,
     ADD_LAYER_ERROR,
@@ -47,7 +49,7 @@ import {
     DELETE_CATALOG_SERVICE,
     SAVING_SERVICE,
     CHANGE_METADATA_TEMPLATE,
-    TOGGLE_THUMBNAIL,
+    SET_THUMBNAIL_FLAG,
     TOGGLE_TEMPLATE,
     TOGGLE_ADVANCED_SETTINGS,
     addCatalogService,
@@ -290,14 +292,14 @@ describe('Test the catalog reducer', () => {
         }}, {type: CHANGE_CATALOG_MODE, mode, isNew});
         expect(state2.newService.title).toBe("tit");
     });
-    it('TOGGLE_THUMBNAIL ', () => {
+    it('SET_THUMBNAIL_FLAG ', () => {
         const state = catalog({
             newService: {}
-        }, {type: TOGGLE_THUMBNAIL});
+        }, {type: SET_THUMBNAIL_FLAG, toggleValue: true});
         expect(state.newService.hideThumbnail).toBe(true);
         const state2 = catalog({
             newService: {hideThumbnail: true}
-        }, {type: TOGGLE_THUMBNAIL});
+        }, {type: SET_THUMBNAIL_FLAG, toggleValue: false});
         expect(state2.newService.hideThumbnail).toBe(false);
     });
     it('TOGGLE_TEMPLATE toggling on the template', () => {
@@ -363,5 +365,16 @@ describe('Test the catalog reducer', () => {
         }, initPlugin());
         expect(state.editingAllowedRoles).toEqual(option.editingAllowedRoles);
         expect(state.editingAllowedGroups).toEqual(option.editingAllowedGroups);
+    });
+    it('SET_CREDENTIALS ', () => {
+        let state = catalog({
+            newService: {
+                oldService: 'wms basic',
+                protectedId: '7298d7f0-2448-11f0-ba06-932081a38bd8'
+            }
+        }, setCredentialsAction({
+            oldService: 'wms basic54d803ef-f86c-402f-9f76-68873aa5c64f'
+        }));
+        expect(state.newService.protectedId).toEqual(undefined);
     });
 });

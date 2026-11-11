@@ -32,10 +32,12 @@ import { setControlProperty } from '../../../actions/controls';
 import Message from '../../../components/I18N/Message';
 import AnnotationsFields from '../components/AnnotationsFields';
 import { DEFAULT_TARGET_ID } from '../constants';
-import ConfirmDialog from '../../../components/misc/ConfirmDialog';
+import ConfirmDialog from '../../../components/layout/ConfirmDialog';
 import Portal from '../../../components/misc/Portal';
 import { mapSelector } from '../../../selectors/map';
 import VisibilityLimitsForm from '../../../components/TOC/fragments/settings/VisibilityLimitsForm';
+import FlexBox from '../../../components/layout/FlexBox';
+import Text from '../../../components/layout/Text';
 
 const Button = tooltip(MSButton);
 
@@ -52,7 +54,7 @@ function AnnotationsInfoViewer({
             <div>
                 <ButtonGroup>
                     <Button
-                        className="square-button-md"
+                        className="square-button"
                         bsStyle="primary"
                         tooltipId="annotations.edit"
                         onClick={() => onEdit(layer.id)}
@@ -60,7 +62,7 @@ function AnnotationsInfoViewer({
                         <Glyphicon glyph="pencil"/>
                     </Button>
                     <Button
-                        className="square-button-md"
+                        className="square-button"
                         bsStyle="primary"
                         tooltipId="annotations.remove"
                         onClick={() => setRemoveModal(true)}
@@ -68,7 +70,7 @@ function AnnotationsInfoViewer({
                         <Glyphicon glyph="trash"/>
                     </Button>
                     <Button
-                        className="square-button-md"
+                        className="square-button"
                         bsStyle="primary"
                         tooltipId="annotations.downloadcurrenttooltip"
                         onClick={() => onDownload([layer])}
@@ -89,17 +91,16 @@ function AnnotationsInfoViewer({
             <Portal>
                 <ConfirmDialog
                     show={removeModal}
-                    modal
-                    onClose={() => setRemoveModal(false)}
+                    onCancel={() => setRemoveModal(false)}
                     onConfirm={() => {
                         onRemove(layer.id);
                         setRemoveModal(false);
                     }}
-                    confirmButtonBSStyle="primary"
-                    closeGlyph="1-close"
-                    confirmButtonContent={<Message msgId="annotations.confirm" />}
-                    closeText={<Message msgId="annotations.cancel" />}>
-                    <Message msgId="annotations.undoDeleteFeature" />
+                    variant="danger"
+                    preventHide
+                    titleId={"annotations.undoDeleteFeature"}
+                    confirmId={`annotations.confirm`}
+                    cancelId={`annotations.cancel`}>
                 </ConfirmDialog>
             </Portal>
         </div>
@@ -209,20 +210,20 @@ function AnnotationsPanel({
             className="ms-annotations-panel"
             style={style}
         >
-            <div className="ms-annotations-panel-header">
+            <FlexBox centerChildrenVertically classNames={['_padding-sm']}>
+                <div className="square-button">
+                    <Glyphicon glyph="comment"/>
+                </div>
+                <FlexBox.Fill component={Text} fontSize="md" className="_padding-lr-sm">
+                    <Message msgId="annotations.title" />
+                </FlexBox.Fill>
                 <Button
                     onClick={(event) => handleClosePanel(event)}
-                    className="square-button no-border"
+                    className="square-button _border-transparent"
                 >
                     <Glyphicon glyph="1-close"/>
                 </Button>
-                <div className="ms-annotations-title">
-                    <Message msgId="annotations.title" />
-                </div>
-                <div className="square-button text-primary">
-                    <Glyphicon glyph="comment"/>
-                </div>
-            </div>
+            </FlexBox>
             <Nav bsStyle="tabs" activeKey={tab} className="ms-annotations-panel-nav">
                 <NavItem
                     key="properties"
@@ -247,7 +248,7 @@ function AnnotationsPanel({
                     <Message msgId="settings"/>
                 </NavItem>
                 <Button
-                    className="square-button-md"
+                    className="square-button"
                     bsStyle="primary"
                     tooltipId="annotations.downloadcurrenttooltip"
                     disabled={!(validateFields() && validateFeatures())}
@@ -293,14 +294,13 @@ function AnnotationsPanel({
             <Portal>
                 <ConfirmDialog
                     show={closeModal}
-                    modal
-                    onClose={() => handleCancelClose()}
+                    onCancel={() => handleCancelClose()}
                     onConfirm={() => handleConfirmClose()}
-                    confirmButtonBSStyle="primary"
-                    closeGlyph="1-close"
-                    confirmButtonContent={<Message msgId="annotations.confirm" />}
-                    closeText={<Message msgId="annotations.cancel" />}>
-                    <Message msgId="annotations.undo" />
+                    variant="danger"
+                    preventHide
+                    titleId={"annotations.undo"}
+                    confirmId={`annotations.confirm`}
+                    cancelId={`annotations.cancel`}>
                 </ConfirmDialog>
             </Portal>
         </div>

@@ -17,6 +17,8 @@ import * as backgrounds from './backgrounds';
 import * as threeDTiles from './ThreeDTiles';
 import * as cog from './COG';
 import * as model from './Model';           // todo: will change to model
+import * as arcgis from './ArcGIS';
+import * as flatgeobuf from './FlatGeobuf';
 /**
  * APIs collection for catalog.
  * Each entry must implement:
@@ -43,6 +45,7 @@ export default {
     // TODO: we should separate catalog specific API from OGC services API, to define better the real interfaces of each API.
     // TODO: validate could be converted in a simple function
     // TODO: testService could be converted in a simple Promise
+    // TODO: use LAYER_TYPE constants defined in each module as keys for the exported object
     'csw': csw,
     'wfs': wfs,
     'wms': wms,
@@ -52,5 +55,7 @@ export default {
     'backgrounds': backgrounds,
     '3dtiles': threeDTiles,
     'cog': cog,
-    'model': model
+    'model': model,
+    'arcgis': arcgis,
+    'flatgeobuf': flatgeobuf
 };

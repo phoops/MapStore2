@@ -8,7 +8,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import expect from 'expect';
-import assign from 'object-assign';
 import DrawSupport from '../DrawSupport';
 import {DEFAULT_ANNOTATIONS_STYLES} from '../../../../plugins/Annotations/utils/AnnotationsUtils';
 import {circle, geomCollFeature} from '../../../../test-resources/drawsupport/features';
@@ -19,6 +18,7 @@ import VectorSource from "ol/source/Vector";
 import VectorLayer from 'ol/layer/Vector';
 import ImageLayer from 'ol/layer/Image';
 import ImageWMS from 'ol/source/ImageWMS';
+import { isNearlyEqual } from '../../../../utils/MapUtils';
 
 const viewOptions = {
     projection: 'EPSG:3857',
@@ -499,12 +499,6 @@ describe('Test DrawSupport', () => {
                 onChangeDrawingStatus={testHandlers.onStatusChange}
             />, document.getElementById("container"));
         const {geodesicCenter} = support.drawSource.getFeatures()[0].getGeometry().getProperties();
-        const isNearlyEqual = function(a, b) {
-            if (a === undefined || b === undefined) {
-                return false;
-            }
-            return a.toFixed(12) - b.toFixed(12) === 0;
-        };
         expect(isNearlyEqual(geodesicCenter[0], 721565.5470120639)).toBeTruthy();
         expect(isNearlyEqual(geodesicCenter[1], 5586683.477814646)).toBeTruthy();
     });
@@ -1573,7 +1567,7 @@ describe('Test DrawSupport', () => {
         };
         ReactDOM.render(<DrawSupport {...properties}/>, document.getElementById("container"));
 
-        let newProps = assign({}, properties, {
+        let newProps = Object.assign({}, properties, {
             features: [{
                 center: {x: -11271098, y: 7748880},
                 coordinates: [-11271098, 7748880],

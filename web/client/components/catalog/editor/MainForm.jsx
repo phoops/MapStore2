@@ -5,46 +5,70 @@
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React, { useState, useEffect } from 'react';
-import {get, find, isEmpty} from 'lodash';
+import React, { useState } from 'react';
+import {get, find} from 'lodash';
+import { Button, InputGroup, FormControl as FC, Form, Col, FormGroup, ControlLabel, Alert, Glyphicon } from "react-bootstrap";
+
 import Message from '../../I18N/Message';
 import HTML from '../../I18N/HTML';
-
 import {getConfigProp} from '../../../utils/ConfigUtils';
-
 import InfoPopover from '../../widgets/widget/InfoPopover';
-import { FormControl as FC, Form, Col, FormGroup, ControlLabel, Alert } from "react-bootstrap";
-
 import localizedProps from '../../misc/enhancers/localizedProps';
-import {defaultPlaceholder, isValidURL} from "./MainFormUtils";
-
-const FormControl = localizedProps('placeholder')(FC);
-
-const CUSTOM = "custom";
-const TMS = "tms";
-
-const DefaultURLEditor = ({ service = {}, onChangeUrl = () => { } }) => {
-
-    return (
-
-        <FormGroup controlId="URL">
-            <Col xs={12}>
-                <ControlLabel><Message msgId="catalog.url"/></ControlLabel>
-                <FormControl
-                    type="text"
-                    style={{
-                        textOverflow: "ellipsis"
-                    }}
-                    placeholder={defaultPlaceholder(service)}
-                    value={service && service.url}
-                    onChange={(e) => onChangeUrl(e.target.value)}/>
-            </Col>
-        </FormGroup>
-    );
-};
-
+import {checkUrl} from "./MainFormUtils";
 // selector for tile provider
 import CONFIG_PROVIDER from '../../../utils/ConfigProvider';
+import tooltip from '../../misc/enhancers/tooltip';
+
+const FormControl = localizedProps('placeholder')(FC);
+const CUSTOM = "custom";
+const TMS = "tms";
+const Icon = tooltip(Glyphicon);
+
+const UrlAddon = ({
+    onClick,
+    glyph,
+    service,
+    tooltipId,
+    btnClassName
+}) => <InputGroup.Addon
+    onClick={() => {
+        onClick(service);
+    }}
+>
+    <Button className={btnClassName || ""}>
+        <Icon
+            glyph={glyph}
+            tooltipId={tooltipId}
+        />
+    </Button>
+</InputGroup.Addon>;
+
+const DefaultURLEditor = ({
+    service = {},
+    addonsItems = [],
+    onChangeUrl = () => { }
+} ) => {
+
+    const UrlForm = (<FormControl
+        type="text"
+        style={{
+            textOverflow: "ellipsis"
+        }}
+        placeholder={'catalog.urlPlaceHolders.' + service.type}
+        value={service && service.url}
+        onChange={(e) => onChangeUrl(e.target.value)}/>);
+
+    return (<FormGroup controlId="URL" bsSize="medium">
+        <Col xs={12}>
+            <ControlLabel><Message msgId="catalog.url"/></ControlLabel>
+            <InputGroup style={{width: "100%"}}>
+                {UrlForm}
+                {addonsItems.map((item) => <item.Component key={item.name} itemComponent={(props) => <UrlAddon {...props} service={service}/> } service={service} />)}
+            </InputGroup>
+        </Col>
+    </FormGroup>
+    );
+};
 
 const getProviderLabel = k=> k === TMS ? "TMS 1.0.0" : k;
 const TmsURLEditor = ({ serviceTypes = [], onChangeServiceProperty, service = {}, onChangeUrl = () => { }, onChangeTitle = () => { } }) => {
@@ -89,7 +113,7 @@ const TmsURLEditor = ({ serviceTypes = [], onChangeServiceProperty, service = {}
                         style={{
                             textOverflow: "ellipsis"
                         }}
-                        placeholder={"e.g. https://{s}.myUrl.com/{variant}/{z}/{x}/{y}"}
+                        placeholder="catalog.urlPlaceHolders.custom"
                         value={service && service.url}
                         onChange={(e) => onChangeUrl(e.target.value)} />
                 </React.Fragment>
@@ -101,7 +125,7 @@ const TmsURLEditor = ({ serviceTypes = [], onChangeServiceProperty, service = {}
                             style={{
                                 textOverflow: "ellipsis"
                             }}
-                            placeholder={defaultPlaceholder(service)}
+                            placeholder="catalog.urlPlaceHolders.tms"
                             value={service && service.url}
                             onChange={(e) => onChangeUrl(e.target.value)} />
                     </React.Fragment>
@@ -121,7 +145,7 @@ const COGEditor = ({ service = {}, onChangeServiceProperty = () => { } }) => {
                     style={{
                         textOverflow: "ellipsis"
                     }}
-                    placeholder={defaultPlaceholder(service)}
+                    placeholder="catalog.urlPlaceHolders.cog"
                     value={service && service.records && service.records.map(record => record?.url)?.join(',')}
                     onChange={(e) => {
                         let urls = e.target.value || "";
@@ -150,21 +174,26 @@ export default ({
     onChangeTitle,
     onChangeUrl,
     onChangeServiceProperty,
+    addonsItems,
     onChangeType,
     setValid = () => {}
 }) => {
-    const [invalidProtocol, setInvalidProtocol] = useState(false);
+    const [error, setError] = useState(null);
+    const [warning, setWarning] = useState(null);
     function handleProtocolValidity(url) {
         onChangeUrl(url);
         if (url) {
-            const isInvalidProtocol = !isValidURL(url, null, service?.allowUnsecureLayers);
-            setInvalidProtocol(isInvalidProtocol);
-            setValid(!isInvalidProtocol);
+            const {valid, errorMsgId} = checkUrl(url, null, service?.allowUnsecureLayers);
+            if (errorMsgId === "catalog.invalidUrlHttpProtocol") {
+                setError(null);
+                setWarning(errorMsgId);
+            } else {
+                setWarning(null);
+                setError(valid ? null : errorMsgId);
+                setValid(valid);
+            }
         }
     }
-    useEffect(() => {
-        !isEmpty(service.url) && handleProtocolValidity(service.url);
-    }, [service?.allowUnsecureLayers]);
     const URLEditor = service.type === "tms" ? TmsURLEditor : service.type === "cog" ? COGEditor : DefaultURLEditor;
     return (
         <Form horizontal >
@@ -190,10 +219,15 @@ export default ({
                         onChange={(e) => onChangeTitle(e.target.value)} />
                 </Col>
             </FormGroup>
-            <URLEditor key="url-row" serviceTypes={serviceTypes} service={service} onChangeUrl={handleProtocolValidity} onChangeTitle={onChangeTitle} onChangeServiceProperty={onChangeServiceProperty} />
+            <URLEditor
+                addonsItems={addonsItems}
+                key="url-row" serviceTypes={serviceTypes} service={service} onChangeUrl={handleProtocolValidity} onChangeTitle={onChangeTitle} onChangeServiceProperty={onChangeServiceProperty} />
 
-            {invalidProtocol ? <Alert bsStyle="danger">
-                <Message msgId="catalog.invalidUrlHttpProtocol" />
+            {error ? <Alert bsStyle="danger">
+                <Message msgId={error} />
+            </Alert> : null}
+            {warning ? <Alert bsStyle="warning">
+                <Message msgId={warning} />
             </Alert> : null}
 
         </Form>);

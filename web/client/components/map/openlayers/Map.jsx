@@ -18,16 +18,17 @@ import proj4 from 'proj4';
 import { register } from 'ol/proj/proj4.js';
 import PropTypes from 'prop-types';
 import React from 'react';
-import assign from 'object-assign';
 
 import {reproject, reprojectBbox, normalizeLng, normalizeSRS } from '../../../utils/CoordinatesUtils';
 import { getProjection as msGetProjection }  from '../../../utils/ProjectionUtils';
 import ConfigUtils from '../../../utils/ConfigUtils';
-import mapUtils, { getResolutionsForProjection } from '../../../utils/MapUtils';
+import mapUtils, { isNearlyEqual, getResolutionsForProjection } from '../../../utils/MapUtils';
 import projUtils from '../../../utils/openlayers/projUtils';
 import { DEFAULT_INTERACTION_OPTIONS } from '../../../utils/openlayers/DrawUtils';
 
 import {isEqual, find, throttle, isArray, isNil} from 'lodash';
+
+import GeoTIFF from 'ol/source/GeoTIFF.js';
 
 import 'ol/ol.css';
 
@@ -68,7 +69,8 @@ class OpenlayersMap extends React.Component {
         onWarning: PropTypes.func,
         maxExtent: PropTypes.array,
         limits: PropTypes.object,
-        onMouseOut: PropTypes.func
+        onMouseOut: PropTypes.func,
+        editScale: PropTypes.bool
     };
 
     static defaultProps = {
@@ -113,7 +115,7 @@ class OpenlayersMap extends React.Component {
         register(proj4);
         // interactive flag is used only for initializations,
         // TODO manage it also when it changes status (ComponentWillReceiveProps)
-        let interactionsOptions = assign(
+        let interactionsOptions = Object.assign(
             this.props.interactive ?
                 {} :
                 {
@@ -128,7 +130,7 @@ class OpenlayersMap extends React.Component {
                 },
             this.props.mapOptions.interactions);
 
-        let interactions = defaults(assign({
+        let interactions = defaults(Object.assign({
             dragPan: false,
             mouseWheelZoom: false
         }, interactionsOptions, {}));
@@ -144,9 +146,9 @@ class OpenlayersMap extends React.Component {
                 this.mouseWheelInteraction
             ]);
         }
-        let controls = defaultControls(assign({
+        let controls = defaultControls(Object.assign({
             zoom: this.props.zoomControl,
-            attributionOptions: assign({
+            attributionOptions: Object.assign({
                 collapsible: false
             }, this.props.mapOptions.attribution && this.props.mapOptions.attribution.container ? {
                 target: this.getDocument().querySelector(this.props.mapOptions.attribution.container)
@@ -221,6 +223,9 @@ class OpenlayersMap extends React.Component {
                     });
                     const intersectedFeatures = this.getIntersectedFeatures(map, event?.pixel);
                     const tLng = normalizeLng(coords.x);
+
+                    const intersectedPixels = this.getIntersectedPixels(map, event?.pixel);
+
                     this.props.onClick({
                         pixel: {
                             x: event.pixel[0],
@@ -238,7 +243,8 @@ class OpenlayersMap extends React.Component {
                             metaKey: event.originalEvent.metaKey, // MAC OS
                             shift: event.originalEvent.shiftKey
                         },
-                        intersectedFeatures
+                        intersectedFeatures,
+                        intersectedPixels
                     }, layerInfo);
                 }
             }
@@ -304,7 +310,7 @@ class OpenlayersMap extends React.Component {
         }
 
         if (this.map && ((this.props.projection !== newProps.projection) || this.haveResolutionsChanged(newProps)) || this.haveRotationChanged(newProps) || this.props.limits !== newProps.limits) {
-            if (this.props.projection !== newProps.projection || this.props.limits !== newProps.limits || this.haveRotationChanged(newProps)) {
+            if (this.props.projection !== newProps.projection || this.props.limits !== newProps.limits || this.haveRotationChanged(newProps) || (this.haveResolutionsChanged(newProps) || this.props.editScale)) {
                 let mapProjection = newProps.projection;
                 const center = reproject([
                     newProps.center.x,
@@ -379,6 +385,35 @@ class OpenlayersMap extends React.Component {
         return view.getProjection().getExtent() || msGetProjection(props.projection).extent;
     };
 
+    /**
+     *
+     * @param {zoom} map
+     * @param {x, y, longitude, latitude} position
+     * @returns Array of layers with relative intersected pixels
+     */
+    getIntersectedPixels = (map, position) => {
+
+        const allLayers = map.getLayers().getArray();
+
+        const tiffLayers = allLayers.filter(layer =>
+            layer.rendered &&
+            layer.getSource() instanceof GeoTIFF
+        );
+
+        const result = tiffLayers.map(layer => {
+            const rawdata = layer.getData(position);
+            if (!rawdata) return null;
+            const data =  Array.from(rawdata);
+            // const source = layer.getSource();
+            return {
+                id: layer.get('msId'),
+                // remap bands index start from 1 instead of 0 to be consistent with 2D pick and avoid confusion with users
+                bands: data.reduce((acc, value, index) => ({ ...acc, [index + 1]: value }), {})
+            };
+        }).filter(val => val !== null);
+        return result;
+    }
+
     getIntersectedFeatures = (map, pixel) => {
         let groupIntersectedFeatures = {};
         map.forEachFeatureAtPixel(pixel, (feature, layer) => {
@@ -434,6 +469,7 @@ class OpenlayersMap extends React.Component {
                 tLng = tLng - 360;
             }
             const intersectedFeatures = this.getIntersectedFeatures(this.map, event?.pixel);
+            const intersectedPixels = this.getIntersectedPixels(this.map, event?.pixel);
             const elevation = this.getElevation(pos, event.pixel);
             this.props.onMouseMove({
                 y: coords[1] || 0.0,
@@ -452,7 +488,8 @@ class OpenlayersMap extends React.Component {
                 lat: coords[1],
                 lng: tLng,
                 rawPos: event.coordinate.slice(),
-                intersectedFeatures
+                intersectedFeatures,
+                intersectedPixels
             });
         }
     };
@@ -515,12 +552,12 @@ class OpenlayersMap extends React.Component {
     createView = (center, zoom, projection, options, limits = {}) => {
         // limit has a crs defined
         const extent = limits.restrictedExtent && limits.crs && reprojectBbox(limits.restrictedExtent, limits.crs, normalizeSRS(projection));
-        const newOptions = !options || (options && !options.view) ? assign({}, options, { extent }) : assign({}, options);
+        const newOptions = !options || (options && !options.view) ? Object.assign({}, options, { extent }) : Object.assign({}, options);
         /*
         * setting the zoom level in the localConfig file is co-related to the projection extent(size)
         * it is recommended to use projections with the same coverage area (extent). If you want to have the same restricted zoom level (minZoom)
         */
-        const viewOptions = assign({}, {
+        const viewOptions = Object.assign({}, {
             projection: normalizeSRS(projection),
             center: [center.x, center.y],
             zoom: zoom,
@@ -529,7 +566,8 @@ class OpenlayersMap extends React.Component {
             multiWorld: true,
             // does not allow intermediary zoom levels
             // we need this at true to set correctly the scale box
-            constrainResolution: true
+            constrainResolution: true,
+            resolutions: this.getResolutions(normalizeSRS(projection))
         }, newOptions || {});
         return new View(viewOptions);
     };
@@ -537,15 +575,19 @@ class OpenlayersMap extends React.Component {
     _updateMapPositionFromNewProps = (newProps) => {
         var view = this.map.getView();
         const currentCenter = this.props.center;
-        const centerIsUpdated = newProps.center.y === currentCenter.y &&
-            newProps.center.x === currentCenter.x;
+        const centerIsUpdated = isNearlyEqual(newProps.center.y, currentCenter.y, 8) &&
+            isNearlyEqual(newProps.center.x, currentCenter.x, 8);
 
         if (!centerIsUpdated) {
-            // let center = ol.proj.transform([newProps.center.x, newProps.center.y], 'EPSG:4326', newProps.projection);
             let center = reproject({ x: newProps.center.x, y: newProps.center.y }, 'EPSG:4326', newProps.projection, true);
             view.setCenter([center.x, center.y]);
         }
-        if (Math.round(newProps.zoom) !== this.props.zoom) {
+        if (this.props.editScale) {
+            // this is for map print only
+            if (newProps.mapResolution !== this.props.mapResolution) {
+                view.setResolution(newProps.mapResolution);
+            }
+        } else if (Math.round(newProps.zoom) !== this.props.zoom) {
             view.setZoom(Math.round(newProps.zoom));
         }
         if (newProps.bbox && newProps.bbox.rotation !== undefined || this.bbox && this.bbox.rotation !== undefined && newProps.bbox.rotation !== this.props.bbox.rotation) {
@@ -565,7 +607,7 @@ class OpenlayersMap extends React.Component {
         }
     };
 
-    zoomToExtentHandler = (extent, { padding, crs, maxZoom: zoomLevel, duration, nearest} = {})=> {
+    zoomToExtentHandler = (extent, { padding, crs = 'EPSG:4326', maxZoom: zoomLevel, duration, nearest} = {})=> {
         let bounds = reprojectBbox(extent, crs, this.props.projection);
         // TODO: improve this to manage all degenerated bounding boxes.
         if (bounds && bounds[0] === bounds[2] && bounds[1] === bounds[3] &&

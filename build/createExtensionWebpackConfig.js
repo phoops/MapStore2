@@ -57,7 +57,6 @@ module.exports = ({ prod = true, name, exposes, sharedLibrariesEager = true, ali
         filename: "assets/css/[name].css"
     }), ...plugins],
     module: {
-        noParse: [/html2canvas/],
         rules: [
             {
                 test: /\.css$/,
@@ -90,6 +89,7 @@ module.exports = ({ prod = true, name, exposes, sharedLibrariesEager = true, ali
         ]
     },
     output: {
+        hashFunction: "xxhash64", // needed for newer version of node (> version 16)
         publicPath,
         chunkFilename: 'assets/js/[name].[chunkhash:8].js',
         path: destination,

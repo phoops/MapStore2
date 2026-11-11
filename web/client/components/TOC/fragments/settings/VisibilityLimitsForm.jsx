@@ -260,7 +260,7 @@ function VisibilityLimitsForm({
                 <div style={{ flex: 1 }}>{title}</div>
                 <Toolbar
                     btnDefaultProps={{
-                        className: 'square-button-md no-border'
+                        className: 'square-button no-border'
                     }}
                     buttons={[
                         {
@@ -392,6 +392,9 @@ function VisibilityLimitsForm({
                 disabled={disableResolutionLimits || loading}
                 onChange={({ value }) => {
                     setLimitsType(value);
+                    onChange({
+                        visibilityLimitType: value
+                    });
                     clearMessages();
                 }}
             />

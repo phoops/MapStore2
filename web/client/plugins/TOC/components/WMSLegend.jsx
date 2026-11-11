@@ -9,7 +9,10 @@
 import React from 'react';
 
 import PropTypes from 'prop-types';
-import { isEmpty, isNumber } from 'lodash';
+import pick from 'lodash/pick';
+import isEmpty from 'lodash/isEmpty';
+import isNumber from 'lodash/isNumber';
+import StyleBasedWMSJsonLegend from './StyleBasedWMSJsonLegend';
 import Legend from './Legend';
 /**
  * WMSLegend renders the wms legend image
@@ -37,13 +40,18 @@ class WMSLegend extends React.Component {
         scaleDependent: PropTypes.bool,
         language: PropTypes.string,
         legendWidth: PropTypes.number,
-        legendHeight: PropTypes.number
+        legendHeight: PropTypes.number,
+        onChange: PropTypes.func,
+        projection: PropTypes.string,
+        mapSize: PropTypes.object,
+        mapBbox: PropTypes.object
     };
 
     static defaultProps = {
         legendContainerStyle: {},
         showOnlyIfVisible: false,
-        scaleDependent: true
+        scaleDependent: true,
+        onChange: () => {}
     };
 
     constructor(props) {
@@ -57,21 +65,22 @@ class WMSLegend extends React.Component {
 
     componentDidMount() {
         const containerWidth = this.containerRef.current && this.containerRef.current.clientWidth;
-        this.setState({ containerWidth, ...this.state });
+        this.setState({ containerWidth, ...this.state }); // eslint-disable-line -- TODO: need to be fixed
     }
-
+    getLegendProps = () => {
+        return pick(this.props, ['currentZoomLvl', 'scales', 'scaleDependent', 'language', 'projection', 'mapSize', 'mapBbox']);
+    }
     render() {
         let node = this.props.node || {};
         const showLegend = this.canShow(node) && node.type === "wms" && node.group !== "background";
+        const isJsonLegend = !!(this.props.node?.enableInteractiveLegend);
         const useOptions = showLegend && this.useLegendOptions();
-        if (showLegend) {
+        if (showLegend && !isJsonLegend) {
             return (
                 <div style={!this.setOverflow() ? this.props.legendContainerStyle : this.state.legendContainerStyle} ref={this.containerRef}>
                     <Legend
                         style={!this.setOverflow() ? this.props.legendStyle : {}}
                         layer={node}
-                        currentZoomLvl={this.props.currentZoomLvl}
-                        scales={this.props.scales}
                         legendHeight={
                             useOptions &&
                             this.props.node.legendOptions &&
@@ -87,8 +96,36 @@ class WMSLegend extends React.Component {
                             undefined
                         }
                         legendOptions={this.props.WMSLegendOptions}
-                        scaleDependent={this.props.scaleDependent}
-                        language={this.props.language}
+                        {...this.getLegendProps()}
+                        onChange={this.props.onChange}
+                    />
+                </div>
+            );
+        }
+        if (showLegend) {
+            return (
+                <div style={!this.setOverflow() ? this.props.legendContainerStyle : this.state.legendContainerStyle} ref={this.containerRef}>
+                    <StyleBasedWMSJsonLegend
+                        style={!this.setOverflow() ? this.props.legendStyle : {}}
+                        layer={node}
+                        legendHeight={
+                            useOptions &&
+                            this.props.node.legendOptions &&
+                            this.props.node.legendOptions.legendHeight ||
+                            this.props.legendHeight ||
+                            undefined
+                        }
+                        legendWidth={
+                            useOptions &&
+                            this.props.node.legendOptions &&
+                            this.props.node.legendOptions.legendWidth ||
+                            this.props.legendWidth ||
+                            undefined
+                        }
+                        legendOptions={this.props.WMSLegendOptions}
+                        onChange={this.props.onChange}
+                        {...this.getLegendProps()}
+                        interactive
                     />
                 </div>
             );

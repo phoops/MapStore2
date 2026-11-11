@@ -42,14 +42,14 @@ describe("Test the login modal", () => {
             onSubmit: (user, password) => {
                 return {user: user, password: password};
             },
-            onLoginSuccess: () => {
+            onClose: () => {
 
             }
         };
 
         const spy = expect.spyOn(testHandlers, 'onSubmit');
-        const spySuccess = expect.spyOn(testHandlers, 'onLoginSuccess');
-        const cmp = ReactDOM.render(<LoginModal options={{animation: false}} show key="test" onLoginSuccess={testHandlers.onLoginSuccess} onSubmit={testHandlers.onSubmit}/>, document.getElementById("container"));
+        const spyClose = expect.spyOn(testHandlers, 'onClose');
+        const cmp = ReactDOM.render(<LoginModal options={{animation: false}} show key="test" onClose={testHandlers.onClose} onSubmit={testHandlers.onSubmit}/>, document.getElementById("container"));
         expect(cmp).toExist();
         let username = document.getElementsByTagName("input")[0];
         expect(username).toExist();
@@ -61,11 +61,20 @@ describe("Test the login modal", () => {
         password.value = "test";
         ReactTestUtils.Simulate.change(password);
 
-        let button = document.getElementsByTagName("button")[1];
-        ReactTestUtils.Simulate.click(button);
+
+        const submitButton = document.querySelector('button[value="user.signIn"]');
+        expect(submitButton).toExist();
+        ReactTestUtils.Simulate.click(submitButton);
         expect(spy.calls.length).toEqual(1);
-        ReactDOM.render(<LoginModal options={{animation: false}} show key="test" onSubmit={testHandlers.onSubmit} onLoginSuccess={testHandlers.onLoginSuccess} user={{name: "TEST"}} />, document.getElementById("container"));
-        expect(spySuccess.calls.length).toEqual(1);
+
+        ReactDOM.render(
+            <LoginModal options={{animation: false}} show key="test" onSubmit={testHandlers.onSubmit} onClose={testHandlers.onClose} user={{name: "TEST"}} />, document.getElementById("container")
+        );
+        expect(spyClose.calls.length).toEqual(0);
+        const closeButton = document.querySelector('button.close');
+        expect(closeButton).toExist();
+        ReactTestUtils.Simulate.click(closeButton);
+        expect(spyClose.calls.length).toEqual(1);
     });
     describe('multi-providers', () => {
         it('geostore only', () => {

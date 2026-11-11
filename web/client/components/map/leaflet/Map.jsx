@@ -10,7 +10,6 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import ConfigUtils from '../../../utils/ConfigUtils';
 import {reprojectBbox, reproject} from '../../../utils/CoordinatesUtils';
-import assign from 'object-assign';
 import {
     getGoogleMercatorResolutions,
     EXTENT_TO_ZOOM_HOOK,
@@ -19,7 +18,8 @@ import {
     GET_PIXEL_FROM_COORDINATES_HOOK,
     GET_COORDINATES_FROM_PIXEL_HOOK,
     ZOOM_TO_EXTENT_HOOK,
-    registerHook
+    registerHook,
+    isNearlyEqual
 } from '../../../utils/MapUtils';
 import Rx from 'rxjs';
 
@@ -97,7 +97,7 @@ class LeafletMap extends React.Component {
         if (this.props.mapOptions && this.props.mapOptions.view && this.props.mapOptions.view.resolutions && this.props.mapOptions.view.resolutions.length > 0) {
             const scaleFun = L.CRS.EPSG3857.scale;
             const ratio = this.props.mapOptions.view.resolutions[0] / getGoogleMercatorResolutions(0, 23)[0];
-            this.crs = assign({}, L.CRS.EPSG3857, {
+            this.crs = Object.assign({}, L.CRS.EPSG3857, {
                 scale: (zoom) => {
                     return scaleFun.call(L.CRS.EPSG3857, zoom) / Math.pow(2, Math.round(Math.log2(ratio)));
                 }
@@ -108,7 +108,7 @@ class LeafletMap extends React.Component {
     componentDidMount() {
         const {limits = {}} = this.props;
         const maxBounds = limits.restrictedExtent && limits.crs && reprojectBbox(limits.restrictedExtent, limits.crs, "EPSG:4326");
-        let mapOptions = assign({}, this.props.interactive ? {} : {
+        let mapOptions = Object.assign({}, this.props.interactive ? {} : {
             dragging: false,
             touchZoom: false,
             scrollWheelZoom: false,
@@ -125,7 +125,7 @@ class LeafletMap extends React.Component {
             maxZoom: limits && limits.maxZoom || 23
         }, this.props.mapOptions, this.crs ? {crs: this.crs} : {});
         // it is not possible to use #<id> in a query selector if the id starts with a number
-        const map = L.map(this.getDocument().querySelector(`[id='${this.props.id}'] > .map-viewport`), assign({ zoomControl: false }, mapOptions) ).setView([this.props.center.y, this.props.center.x],
+        const map = L.map(this.getDocument().querySelector(`[id='${this.props.id}'] > .map-viewport`), Object.assign({ zoomControl: false }, mapOptions) ).setView([this.props.center.y, this.props.center.x],
             Math.round(this.props.zoom));
 
         this.map = map;
@@ -394,15 +394,6 @@ class LeafletMap extends React.Component {
     }
 
     _updateMapPositionFromNewProps = (newProps) => {
-        // current implementation will update the map only if the movement
-        // between 12 decimals in the reference system to avoid rounded value
-        // changes due to float mathematic operations.
-        const isNearlyEqual = function(a, b) {
-            if (a === undefined || b === undefined) {
-                return false;
-            }
-            return a.toFixed(12) - b.toFixed(12) === 0;
-        };
 
         // getting all centers we need to check
         const newCenter = newProps.center;
@@ -488,7 +479,7 @@ class LeafletMap extends React.Component {
             crs: "EPSG:4326",
             pixel: {
                 x: event.containerPoint.x,
-                y: event.containerPoint.x
+                y: event.containerPoint.y
             },
             latlng: {
                 lat: event.latlng.lat,

@@ -10,13 +10,19 @@ import React from 'react';
 
 import PropTypes from 'prop-types';
 import Accordion from '../../../misc/panels/Accordion';
-import { getSupportedFormat } from '../../../../api/WMS';
+import { getSupportedFormat as getSupportedFormatWMS } from '../../../../api/WMS';
+import { getSupportedFormat as getSupportedFormatWFS } from '../../../../api/WFS';
 import Loader from '../../../misc/Loader';
 import { Glyphicon } from 'react-bootstrap';
 import Message from '../../../I18N/Message';
 import includes from 'lodash/includes';
 import isEmpty from 'lodash/isEmpty';
 import { getDefaultInfoViewMode } from '../../../../utils/MapInfoUtils';
+
+const supportedFormatRequests = {
+    wms: getSupportedFormatWMS,
+    wfs: getSupportedFormatWFS
+};
 
 /**
  * Component for rendering FeatureInfo an Accordion with current available format for get feature info
@@ -28,7 +34,6 @@ import { getDefaultInfoViewMode } from '../../../../utils/MapInfoUtils';
  * @prop {object} formatCards object that represents the panels of accordion, e.g.: { FORMAT_NAME: { titleId: 'titleMsgId', descId: 'descMsgId', glyph: 'ext-empty', body: () => <div/> } }
  * @prop {function} onChange called when a format has been selected
  */
-
 export default class extends React.Component {
     static propTypes = {
         element: PropTypes.object,
@@ -49,16 +54,17 @@ export default class extends React.Component {
     };
 
     componentDidMount() {
+        const getSupportedFormat = supportedFormatRequests[this.props.element.type];
         // we dont know supported infoFormats yet
-        if (this.props.element.url && !this.props.element.infoFormats || this.props.element.infoFormats?.length === 0) {
-            this.setState({ loading: true });
+        if (getSupportedFormat && this.props.element.url && !this.props.element.infoFormats || this.props.element.infoFormats?.length === 0) {
+            this.setState({ loading: true }); // eslint-disable-line -- TODO: need to be fixed
             getSupportedFormat(this.props.element.url, true)
                 .then(({ infoFormats }) => {
                     this.props.onChange("infoFormats", infoFormats);
-                    this.setState({ loading: false });
+                    this.setState({ loading: false }); // eslint-disable-line -- TODO: need to be fixed
                 })
                 .catch(() => {
-                    this.setState({ loading: false });
+                    this.setState({ loading: false }); // eslint-disable-line -- TODO: need to be fixed
                 });
         }
     }
@@ -93,7 +99,14 @@ export default class extends React.Component {
 
     render() {
         // the selected value if missing on that layer should be set to the general info format value and not the first one.
-        const data = this.getInfoViews(this.transformInfoFormatsToViews(this.supportedInfoFormats()));
+        const data = this.getInfoViews(
+            this.transformInfoFormatsToViews(
+                {
+                    'HIDDEN': true,
+                    ...this.supportedInfoFormats()
+                }
+            )
+        );
         return this.state.loading ? (
             <div
                 style={{
@@ -130,8 +143,9 @@ export default class extends React.Component {
      * @return {object} info formats
      */
     supportedInfoFormats = () => {
-        const excludedFormatsWfs = ['TEXT', 'HTML'];
         const availableInfoFormats =  this.props.element?.infoFormats || [];
+        // if the infoFormats is empty we should exclude also HMTL for default supported types
+        const excludedFormatsWfs = availableInfoFormats.length ? ['TEXT'] : ['TEXT', 'HTML'];
         const supportedWfsFormats = Object.fromEntries(Object.entries(this.props.defaultInfoFormat).filter(([key]) => !excludedFormatsWfs.includes(key)));
         const formats = this.props.element.type === 'wfs' ? supportedWfsFormats : this.props.defaultInfoFormat;
         const infoFormats = Object.assign({},
@@ -139,7 +153,6 @@ export default class extends React.Component {
                 .filter(([, value])=> includes(availableInfoFormats, value))
                 .map(([key, value])=> ({[key]: value}))
         );
-
         return isEmpty(infoFormats) ? formats : infoFormats;
     }
 }

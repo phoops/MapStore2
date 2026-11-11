@@ -8,8 +8,10 @@
 
 import React from 'react';
 
-import { Glyphicon, Grid, Row, Col } from 'react-bootstrap';
+import { Glyphicon } from 'react-bootstrap';
 import Button from '../../misc/Button';
+import FlexBox from '../../layout/FlexBox';
+import Text from '../../layout/Text';
 
 /* eslint-disable */
 const fullscreenGlyph = {
@@ -52,49 +54,42 @@ const fullscreenGlyph = {
 export default ({
     position = 'right',
     onClose,
-    bsStyle = 'default',
     title = '',
     fullscreen = false,
     showFullscreen = false,
     glyph = 'info-sign',
     additionalRows,
-    onFullscreen = () => {}
+    onFullscreen = () => {},
+    hideCloseButton = false
 }) => {
-    const closeButton = !onClose ? null : (
-        <Button key="ms-header-close" className="square-button ms-close" onClick={onClose} bsStyle={bsStyle}>
+    const closeButton = hideCloseButton || !onClose ? null : (
+        <Button key="ms-header-close" className="ms-close square-button _border-transparent" onClick={onClose}>
             <Glyphicon glyph="1-close"/>
         </Button>
     );
     const glyphButton = showFullscreen ? (
         <Button
             key="ms-header-glyph"
-            className="square-button"
-            bsStyle={bsStyle}
+            className="square-button _border-transparent"
             onClick={() => onFullscreen(!fullscreen)}>
             <Glyphicon glyph={fullscreenGlyph[position] && fullscreenGlyph[position][fullscreen] || 'resize-full'}/>
-        </Button>) :
+        </Button>) : glyph ?
         (<div
             key="ms-header-glyph"
-            className={`square-button ${'bg-' + bsStyle}`}
-            style={{display: 'flex'}}>
-            <Glyphicon glyph={glyph} className={`${bsStyle === 'default' ? 'text-primary' : '' }`}/>
+            className={`square-button _border-transparent`}>
+            <Glyphicon glyph={glyph}/>
         </div>
-        );
-    const buttons = position === 'left' ? [closeButton, glyphButton] : [glyphButton, closeButton];
+        ) : null;
     return (
-        <Grid fluid style={{width: '100%'}} className={'ms-header ms-' + bsStyle}>
-            <Row>
-                <Col xs={2}>
-                    {buttons[0]}
-                </Col>
-                <Col xs={8}>
-                    <h4>{title}</h4>
-                </Col>
-                <Col xs={2}>
-                    {buttons[1]}
-                </Col>
-            </Row>
+        <FlexBox classNames={['ms-header', '_padding-sm']} gap="sm" column>
+            <FlexBox centerChildrenVertically>
+                {glyphButton}
+                <FlexBox.Fill component={Text} fontSize="md" className="_padding-lr-sm">
+                    {title}
+                </FlexBox.Fill>
+                {closeButton}
+            </FlexBox>
             {additionalRows}
-        </Grid>
+        </FlexBox>
     );
 };

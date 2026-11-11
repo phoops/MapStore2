@@ -132,7 +132,7 @@ export function printTransformerAdded(name) {
     };
 }
 
-export function configurePrintMap(center, zoom, scaleZoom, scale, layers, projection, currentLocale) {
+export function configurePrintMap(center, zoom, scaleZoom, scale, layers, projection, currentLocale, useFixedScales = false, disableScaleLockingParams = {}) {
     return {
         type: CONFIGURE_PRINT_MAP,
         center,
@@ -141,19 +141,24 @@ export function configurePrintMap(center, zoom, scaleZoom, scale, layers, projec
         scale,
         layers,
         projection,
-        currentLocale
+        currentLocale,
+        useFixedScales,
+        editScale: disableScaleLockingParams?.editScale || false,
+        mapResolution: disableScaleLockingParams?.mapResolution
     };
 }
 
-export function changePrintZoomLevel(zoom, scale) {
+export function changePrintZoomLevel(zoom, scale, resolution, resolutions) {
     return {
         type: CHANGE_PRINT_ZOOM_LEVEL,
         zoom,
-        scale
+        scale,
+        resolution,
+        resolutions
     };
 }
 
-export function changeMapPrintPreview(center, zoom, bbox, size, mapStateSource, projection) {
+export function changeMapPrintPreview(center, zoom, bbox, size, mapStateSource, projection, _, resolution) {
     return {
         type: CHANGE_MAP_PRINT_PREVIEW,
         center,
@@ -161,6 +166,7 @@ export function changeMapPrintPreview(center, zoom, bbox, size, mapStateSource, 
         bbox,
         size,
         mapStateSource,
-        projection
+        projection,
+        resolution
     };
 }

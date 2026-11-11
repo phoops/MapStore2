@@ -66,6 +66,35 @@ export const currentProviderApiLoadedSelector = state => apiLoadedSelectorCreato
  * @returns {object} the configuration for the current provider
  */
 export const providerSettingsSelector = state => streetViewConfigurationSelector(state)?.providerSettings ?? {};
+
+const getVectorStyle = (overrides) => ({
+    format: "geostyler",
+    body: {
+        name: "My Style",
+        rules: [
+            {
+                name: "",
+                symbolizers: [
+                    {
+                        color: "#3165ef",
+                        fillOpacity: 0.6,
+                        strokeColor: "#3165ef",
+                        strokeOpacity: 0.8,
+                        strokeWidth: 2,
+                        radius: 6,
+                        wellKnownName: "Circle",
+                        msHeightReference: "none",
+                        msBringToFront: true,
+                        ...overrides,
+                        kind: "Mark",
+                        symbolizerId: "d2c4dab1-a0e7-11ee-a734-df08d0913056"
+                    }
+                ],
+                ruleId: "d2c4dab0-a0e7-11ee-a734-df08d0913056"
+            }
+        ]
+    }
+});
 const GOOGLE_DATA_LAYER_DEFAULTS = {
     provider: 'custom',
     type: "tileprovider",
@@ -78,38 +107,18 @@ const CYCLOMEDIA_DATA_LAYER_DEFAULTS = {
         sourceType: 'sessionStorage',
         sourceId: CYCLOMEDIA_CREDENTIALS_REFERENCE
     },
-    strategy: 'bbox', // loads data only in the current extent
+    strategy: 'tile', // loads data only in the current extent,
+    // On Cesium, this is needed to create tile only on level 17, Check about these terms on: web/client/utils/cesium/TiledBillboardCollection.js
+    maximumLevel: 17,
+    minimumLevel: 17,
     maxResolution: CYCLOMEDIA_DEFAULT_MAX_RESOLUTION,
     serverType: ServerTypes.NO_VENDOR, // do not support CQL filters
     url: "https://atlasapi.cyclomedia.com/api/Recordings/wfs",
     name: "atlas:Recording",
-    style: {
-        format: "geostyler",
-        body: {
-            name: "My Style",
-            rules: [
-                {
-                    name: "",
-                    symbolizers: [
-                        {
-                            kind: "Mark",
-                            color: "#0000ff",
-                            fillOpacity: 1,
-                            strokeColor: "#000000",
-                            strokeOpacity: 1,
-                            strokeWidth: 1,
-                            radius: 5,
-                            wellKnownName: "Circle",
-                            msHeightReference: "none",
-                            msBringToFront: true,
-                            symbolizerId: "d2c4dab1-a0e7-11ee-a734-df08d0913056"
-                        }
-                    ],
-                    ruleId: "d2c4dab0-a0e7-11ee-a734-df08d0913056"
-                }
-            ]
-        }
-    }
+    tileSize: 512
+};
+const MAPILLARY_DATA_LAYER_DEFAULTS = {
+    type: 'vector'
 };
 /**
  * Gets the default data layer configuration for the current provider.
@@ -119,12 +128,22 @@ const CYCLOMEDIA_DATA_LAYER_DEFAULTS = {
  */
 const providerDataLayerDefaultsSelector = createSelector(
     streetViewProviderSelector,
-    (provider) => {
+    streetViewConfigurationSelector,
+    (provider, configuration) => {
+        const msHeightReference = configuration?.clampToGround ? 'clamp' : 'none';
         switch (provider) {
         case PROVIDERS.GOOGLE:
             return GOOGLE_DATA_LAYER_DEFAULTS;
         case PROVIDERS.CYCLOMEDIA:
-            return CYCLOMEDIA_DATA_LAYER_DEFAULTS;
+            return { ...CYCLOMEDIA_DATA_LAYER_DEFAULTS, style: getVectorStyle({ msHeightReference }) };
+        case PROVIDERS.MAPILLARY:
+            // currently we are supporting only the custom type for mapillary
+            // so the layer type will be a vector layer
+            return {
+                ...MAPILLARY_DATA_LAYER_DEFAULTS,
+                style: getVectorStyle({ msHeightReference }),
+                url: configuration?.providerSettings?.ApiURL
+            };
         default:
             return {};
         }
@@ -144,7 +163,7 @@ export function streetViewDataLayerSelector(state) {
 /**
  * gets the API key for Google street view.
  * @memberof selectors.streetview
- * @returns the API key in cascade from plugin's `cfg.apiKey` property, `localConfig.json` properties (in this order of priority): `apiKeys.googleStreetViewAPIKey`, `apiKeys.googleAPIKey`, `googleAPIKey`.
+ * @returns {string} the API key in cascade from plugin's `cfg.apiKey` property, `localConfig.json` properties (in this order of priority): `apiKeys.googleStreetViewAPIKey`, `apiKeys.googleAPIKey`, `googleAPIKey`.
  */
 export function googleAPIKeySelector(state) {
     return streetViewConfigurationSelector(state)?.apiKey
@@ -156,17 +175,29 @@ export function googleAPIKeySelector(state) {
  * Selector for the cyclomedia API key
  * @memberof selectors.streetview
  * @param {object} state the state
- * @returns the API key in cascade from plugin's `cfg.apiKey` property, `localConfig.json` properties (in this order of priority): `apiKeys.cyclomediaAPIKey`.
+ * @returns {string} the API key in cascade from plugin's `cfg.apiKey` property, `localConfig.json` properties (in this order of priority): `apiKeys.cyclomediaAPIKey`.
  */
 export function cyclomediaAPIKeySelector(state) {
     return streetViewConfigurationSelector(state)?.apiKey
         ?? localConfigSelector(state)?.apiKeys?.cyclomediaAPIKey;
 }
 /**
+ * Selector for the mapillary API key
+ * @memberof selectors.streetview
+ * @param {object} state the state
+ * @returns {string} the API key in cascade from plugin's `cfg.apiKey` property, `localConfig.json` properties (in this order of priority): `apiKeys.mapillaryAPIKey`.
+ */
+export function mapillaryAPIKeySelector(state) {
+    const mapillaryConfig = streetViewConfigurationSelector(state);
+    if (mapillaryConfig?.providerSettings?.ApiURL) return {};
+    return mapillaryConfig?.apiKey
+        ?? localConfigSelector(state)?.apiKeys?.mapillaryAPIKey;
+}
+/**
  * Selector for the API key for the current provider
  * @memberof selectors.streetview
  * @param {object} state the state
- * @returns the API key for the current provider
+ * @returns {string} the API key for the current provider
  */
 export function streetViewAPIKeySelector(state) {
     switch (streetViewProviderSelector(state)) {
@@ -174,6 +205,8 @@ export function streetViewAPIKeySelector(state) {
         return googleAPIKeySelector(state);
     case PROVIDERS.CYCLOMEDIA:
         return cyclomediaAPIKeySelector(state);
+    case PROVIDERS.MAPILLARY:
+        return mapillaryAPIKeySelector(state);
     default:
         return null;
     }
@@ -191,7 +224,7 @@ export function useStreetViewDataLayerSelector(state) {
 /**
  * gets from the state the panorama options currently loaded
  * @param {object} state
- * @returns the panorama options configured
+ * @returns {object} the panorama options configured
  */
 export function panoramaOptionsSelector(state) {
     return streetViewConfigurationSelector(state)?.panoramaOptions;

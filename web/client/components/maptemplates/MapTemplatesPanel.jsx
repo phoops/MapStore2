@@ -14,7 +14,7 @@ import BorderLayout from '../layout/BorderLayout';
 import SideGrid from '../misc/cardgrids/SideGrid';
 import Toolbar from '../misc/toolbar/Toolbar';
 import BaseFilter from '../misc/Filter';
-import ConfirmDialog from '../misc/ConfirmDialog';
+import ConfirmDialog from '../layout/ConfirmDialog';
 import emptyState from '../misc/enhancers/emptyState';
 import localizedProps from '../misc/enhancers/localizedProps';
 import {formatToGlyph, formatToText} from '../../utils/FileFormatUtils';
@@ -88,7 +88,7 @@ export default ({
             </div>,
         tools: <Toolbar
             btnDefaultProps={{
-                className: 'square-button-md'
+                className: 'square-button'
             }}
             buttons={[{
                 glyph: 'transfer',
@@ -109,7 +109,7 @@ export default ({
                 }
             }, {
                 glyph: template.favourite ? 'star' : 'star-empty',
-                className: 'square-button-md no-border',
+                className: 'square-button no-border',
                 tooltipId: template.favourite ? 'mapTemplates.favouriteRemove' : 'mapTemplates.favouriteAdd',
                 onClick: (e) => {
                     e.stopPropagation();
@@ -142,10 +142,11 @@ export default ({
                     favouriteItems={favouriteItems}/>
             </BorderLayout>
             <ConfirmDialog
-                modal
                 show={showConfirm}
-                title={<Message msgId="mapTemplates.confirmReplaceTitle"/>}
-                onClose={() => {
+                preventHide
+                titleId={"mapTemplates.confirmReplaceTitle"}
+                descriptionId={"mapTemplates.confirmReplaceMessage"}
+                onCancel={() => {
                     setTemplateToReplace();
                     onShowConfirm(false);
                 }}
@@ -154,11 +155,9 @@ export default ({
                     setTemplateToReplace();
                     onShowConfirm(false);
                 }}
-                confirmButtonBSStyle="default"
-                confirmButtonContent={<Message msgId="mapTemplates.confirmReplaceConfirmButton"/>}
-                closeText={<Message msgId="cancel"/>}
-                closeGlyph="1-close">
-                <Message msgId="mapTemplates.confirmReplaceMessage"/>
+                variant="danger"
+                confirmId={`mapTemplates.confirmReplaceConfirmButton`}
+                cancelId="cancel">
             </ConfirmDialog>
         </>
     );

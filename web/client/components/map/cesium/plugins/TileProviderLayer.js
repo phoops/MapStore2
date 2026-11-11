@@ -11,7 +11,9 @@ import * as Cesium from 'cesium';
 import TileProvider from '../../../../utils/TileConfigProvider';
 import ConfigUtils from '../../../../utils/ConfigUtils';
 import {creditsToAttribution} from '../../../../utils/LayersUtils';
-import {getProxyUrl, needProxy} from '../../../../utils/ProxyUtils';
+import {getProxyUrl} from '../../../../utils/ProxyUtils';
+import isEqual from 'lodash/isEqual';
+import { getRequestConfigurationByUrl } from '../../../../utils/SecurityUtils';
 
 function splitUrl(originalUrl) {
     let url = originalUrl;
@@ -55,6 +57,13 @@ export function template(str, data) {
         if (['x', 'y', 'z', 's'].includes(key)) {
             return textMatched;
         }
+        if (key === '-x') {
+            return "{reverseX}";
+        }
+        if (key === '-y') {
+            return "{reverseY}";
+        }
+
         let value = data[key];
 
         if (value === undefined) {
@@ -67,23 +76,40 @@ export function template(str, data) {
     });
 }
 
-Layers.registerType('tileprovider', (options) => {
+const create = (options) => {
     let [url, opt] = TileProvider.getLayerConfig(options.provider, options);
     let proxyUrl = ConfigUtils.getProxyUrl({});
-    let proxy;
-    if (proxyUrl) {
-        proxy = opt.noCors || needProxy(url);
-    }
     const cr = opt.credits;
 
     const credit = cr ? new Cesium.Credit(creditsToAttribution(cr)) : opt.attribution;
-    return new Cesium.UrlTemplateImageryProvider({
+    const { headers, params } = getRequestConfigurationByUrl(options.url, null, options.security?.sourceId);
+    const resource = new Cesium.Resource({
         url: template(url, opt),
+        queryParameters: params,
+        headers,
+        proxy: options?.forceProxy ? new TileProviderProxy(proxyUrl) : new NoProxy()
+    });
+    return new Cesium.UrlTemplateImageryProvider({
+        url: resource,
         enablePickFeatures: false,
         subdomains: opt.subdomains,
         maximumLevel: opt.maxZoom,
         minimumLevel: opt.minZoom,
-        credit,
-        proxy: proxy ? new TileProviderProxy(proxyUrl) : new NoProxy()
+        credit
     });
+};
+
+const update = (layer, newOptions, oldOptions) => {
+    if (
+        newOptions.forceProxy !== oldOptions.forceProxy ||
+        !isEqual(oldOptions.security, newOptions.security)
+    ) {
+        return create(newOptions);
+    }
+    return null;
+};
+
+Layers.registerType('tileprovider', {
+    create,
+    update: update
 });

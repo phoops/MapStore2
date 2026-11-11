@@ -8,7 +8,6 @@
 
 import './metadataexplorer/css/style.css';
 
-import assign from 'object-assign';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Glyphicon, Panel } from 'react-bootstrap';
@@ -16,7 +15,7 @@ import { connect } from 'react-redux';
 import { branch, compose, defaultProps, renderComponent, withProps } from 'recompose';
 import { createStructuredSelector } from 'reselect';
 
-import { addBackgroundProperties, backgroundAdded, clearModalParameters } from '../actions/backgroundselector';
+import { addBackground, addBackgroundProperties, backgroundAdded, clearModalParameters } from '../actions/backgroundselector';
 import {
     addLayer,
     addLayerError,
@@ -82,9 +81,12 @@ import { layersSelector } from '../selectors/layers';
 import { currentLocaleSelector, currentMessagesSelector } from '../selectors/locale';
 import {burgerMenuSelector} from "../selectors/controls";
 import { isLocalizedLayerStylesEnabledSelector } from '../selectors/localizedLayerStyles';
-import { projectionSelector } from '../selectors/map';
+import { mapEnableImageryOverlaySelector, projectionSelector } from '../selectors/map';
 import { mapLayoutValuesSelector } from '../selectors/maplayout';
 import ResponsivePanel from "../components/misc/panels/ResponsivePanel";
+import { DEFAULT_PANEL_WIDTH } from '../utils/LayoutUtils';
+import usePluginItems from '../hooks/usePluginItems';
+import { setProtectedServices, setShowModalStatus } from '../actions/security';
 
 export const DEFAULT_ALLOWED_PROVIDERS = ["OpenStreetMap", "OpenSeaMap", "Stamen"];
 
@@ -124,7 +126,8 @@ const metadataExplorerSelector = createStructuredSelector({
     formatOptions: getSupportedFormatsSelector,
     infoFormatOptions: getSupportedGFIFormatsSelector,
     isNewServiceAdded: getNewServiceStatusSelector,
-    canEdit: canEditServiceSelector
+    canEdit: canEditServiceSelector,
+    globalEnableImageryOverlay: mapEnableImageryOverlaySelector
 });
 
 
@@ -167,12 +170,14 @@ class MetadataExplorerComponent extends React.Component {
         closeGlyph: PropTypes.string,
         buttonStyle: PropTypes.object,
         services: PropTypes.object,
+        addonsItems: PropTypes.array,
         servicesWithBackgrounds: PropTypes.object,
         selectedService: PropTypes.string,
         style: PropTypes.object,
         dockProps: PropTypes.object,
         zoomToLayer: PropTypes.bool,
         isLocalizedLayerStylesEnabled: PropTypes.bool,
+        globalEnableImageryOverlay: PropTypes.bool,
 
         // side panel properties
         width: PropTypes.number,
@@ -185,7 +190,7 @@ class MetadataExplorerComponent extends React.Component {
 
     static defaultProps = {
         id: "mapstore-metadata-explorer",
-        serviceTypes: [{ name: "csw", label: "CSW" }, { name: "wms", label: "WMS" }, { name: "wmts", label: "WMTS" }, { name: "tms", label: "TMS", allowedProviders: DEFAULT_ALLOWED_PROVIDERS }, { name: "wfs", label: "WFS" }, { name: "3dtiles", label: "3D Tiles" }, {name: "model", label: "IFC Model"}],
+        serviceTypes: [{ name: "csw", label: "CSW" }, { name: "wms", label: "WMS" }, { name: "wmts", label: "WMTS" }, { name: "tms", label: "TMS", allowedProviders: DEFAULT_ALLOWED_PROVIDERS }, { name: "wfs", label: "WFS" }, { name: "3dtiles", label: "3D Tiles" }, {name: "model", label: "IFC Model"}, { name: "arcgis", label: "ArcGIS" }, { name: "flatgeobuf", label: "FlatGeobuf" }],
         active: false,
         wrap: false,
         modal: true,
@@ -202,7 +207,7 @@ class MetadataExplorerComponent extends React.Component {
         zoomToLayer: true,
 
         // side panel properties
-        width: 550,
+        width: DEFAULT_PANEL_WIDTH,
         dockProps: {
             dimMode: "none",
             fluid: false,
@@ -213,7 +218,8 @@ class MetadataExplorerComponent extends React.Component {
         group: null,
         services: {},
         servicesWithBackgrounds: {},
-        editingAllowedRoles: ["ALL"]
+        editingAllowedRoles: ["ALL"],
+        globalEnableImageryOverlay: true
     };
 
     componentDidMount() {
@@ -246,7 +252,6 @@ class MetadataExplorerComponent extends React.Component {
                 open={this.props.active}
                 size={this.props.width}
                 position="right"
-                bsStyle="primary"
                 title={<Message msgId="catalog.title"/>}
                 onClose={() => this.props.closeCatalog()}
                 glyph="folder-open"
@@ -259,6 +264,17 @@ class MetadataExplorerComponent extends React.Component {
         );
     }
 }
+
+const MetadataExplorerComponentWrapper = (props, context) => {
+    const { loadedPlugins } = context;
+    const addonsItems = usePluginItems({ items: props.items, loadedPlugins }).filter(({ target }) => target === 'url-addon');
+    return <MetadataExplorerComponent {...props} addonsItems={addonsItems}/>;
+};
+
+
+MetadataExplorerComponentWrapper.contextTypes = {
+    loadedPlugins: PropTypes.object
+};
 
 const MetadataExplorerPlugin = connect(metadataExplorerSelector, {
     clearModal: clearModalParameters,
@@ -291,8 +307,10 @@ const MetadataExplorerPlugin = connect(metadataExplorerSelector, {
     onLayerChange: setControlProperty.bind(null, 'backgroundSelector'),
     onStartChange: setControlProperty.bind(null, 'backgroundSelector', 'start'),
     setNewServiceStatus,
+    onShowSecurityModal: setShowModalStatus,
+    onSetProtectedServices: setProtectedServices,
     onInitPlugin: initPlugin
-})(MetadataExplorerComponent);
+})(MetadataExplorerComponentWrapper);
 
 const AddLayerButton = connect(() => ({}), {
     onClick: setControlProperties.bind(null, 'metadataexplorer', 'enabled', true, 'group')
@@ -326,25 +344,83 @@ const AddLayerButton = connect(() => ({}), {
     return null;
 });
 
+export const BackgroundSelectorAdd = connect(
+    createStructuredSelector({
+        enabled: state => state.controls && state.controls.metadataexplorer && state.controls.metadataexplorer.enabled
+    }),
+    {
+        onAdd: addBackground
+    }
+)(({ source, onAdd = () => {}, itemComponent, canEdit, enabled }) => {
+    const ItemComponent = itemComponent;
+    return canEdit ? (
+        <ItemComponent
+            disabled={!!enabled}
+            onClick={() => {
+                onAdd(source || 'backgroundSelector');
+            }}
+            tooltipId="backgroundSelector.addTooltip"
+            glyph="plus"
+        />
+    ) : null;
+});
+
 /**
- * MetadataExplorer (Catalog) plugin. Shows the catalogs results (CSW, WMS, WMTS, TMS, WFS and COG).
+ * MetadataExplorer (Catalog) plugin. Shows the catalogs results (CSW, WMS, WMTS, TMS, WFS, COG, FGB).
  * Some useful flags in `localConfig.json`:
  * - `noCreditsFromCatalog`: avoid add credits (attribution) from catalog
  *
  * @class
  * @name MetadataExplorer
  * @memberof plugins
- * @prop {string} cfg.hideThumbnail shows/hides thumbnail
- * @prop {object[]} cfg.serviceTypes Service types available to add a new catalog. default: `[{ name: "csw", label: "CSW" }, { name: "wms", label: "WMS" }, { name: "wmts", label: "WMTS" }, { name: "tms", label: "TMS", allowedProviders },{ name: "wfs", label: "WFS" }]`.
+ * @prop {string} cfg.hideThumbnail - Global configuration for thumbnail visibility.
+ *   - **Value**: `true` to hide thumbnails globally, `false` to show thumbnails in catalog.
+ *   - **Overrides**: Service-specific configurations take precedence.
+ * @prop {object[]} cfg.serviceTypes Service types available to add a new catalog. default: `[{ name: "csw", label: "CSW" }, { name: "wms", label: "WMS" }, { name: "wmts", label: "WMTS" }, { name: "tms", label: "TMS", allowedProviders },{ name: "wfs", label: "WFS" },{ name: "flatgeobuf", label: "FlatGeobuf" }]`.
  * `allowedProviders` is a whitelist of tileProviders from ConfigProvider.js. you can set a global variable allowedProviders in localConfig.json to set it up globally. You can configure it to "ALL" to get all the list (at your own risk, some services could change or not be available anymore)
  * @prop {object} cfg.hideIdentifier shows/hides identifier
  * @prop {boolean} cfg.hideExpand shows/hides full description button
  * @prop {number} cfg.zoomToLayer enable/disable zoom to layer when added
  * @prop {number} cfg.autoSetVisibilityLimits if true, allows fetching and setting visibility limits of the layer from capabilities on layer add (Note: The default configuration value is applied only on new catalog service (WMS/CSW))
  * @prop {number} [delayAutoSearch] time in ms passed after a search is triggered by filter changes, default 1000
+ * @prop {object[]} items this property contains the items injected from the other plugins,
+ * using the `url-addon` option in the plugin that want to inject the components.
+ * You can select the position where to insert the components adding the `target` property.
+ * The allowed targets are:
+ * - `url-addon` target add an addon button in the url field of catalog form (in main viewer) in edit mode
+ * ```javascript
+ * const MyAddonComponent = connect(null,
+ * {
+ *     onSetShowModal: setShowModalStatus,
+ *    }
+ * )(({
+ *    onSetShowModal, // opens a modal to enter credentials
+ *    itemComponent // default component that provides a consistent UI (see UrlAddon in MainForm.jsx)
+ *    }) => {
+ *    const Component = itemComponent;
+ *    return (<Component
+ *        onClick={(value) => {
+ *            onSetShowModal(true);
+ *        }}
+ *        btnClassName={condition ? "btn-success" : ""}
+ *        glyph="glyph"
+ *        tooltipId="path"
+ *    />  );
+ * });
+ * createPlugin(
+ *  'MyPlugin',
+ *  {
+ *      containers: {
+ *          MetadataExplorer: {
+ *              name: "TOOLNAME", // a name for the current tool.
+ *              target: "url-addon", // the target where to insert the component
+ *              Component: MyAddonComponent
+ *          },
+ * // ...
+ * ```
  */
 export default {
-    MetadataExplorerPlugin: assign(MetadataExplorerPlugin, {
+    MetadataExplorerPlugin: Object.assign(MetadataExplorerPlugin, {
         BurgerMenu: {
             name: 'metadataexplorer',
             position: 5,
@@ -358,7 +434,9 @@ export default {
         BackgroundSelector: {
             name: 'MetadataExplorer',
             doNotHide: true,
-            priority: 1
+            priority: 1,
+            Component: BackgroundSelectorAdd,
+            target: 'background-toolbar'
         },
         TOC: {
             name: 'MetadataExplorer',

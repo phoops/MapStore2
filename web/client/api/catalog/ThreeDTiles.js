@@ -7,28 +7,28 @@
  */
 
 import { Observable } from 'rxjs';
-import { isValidURLTemplate } from '../../utils/URLUtils';
+import { isValidURL } from '../../utils/URLUtils';
 import { preprocess as commonPreprocess } from './common';
 import { getCapabilities } from '../ThreeDTiles';
 
 function validateUrl(serviceUrl) {
-    if (isValidURLTemplate(serviceUrl)) {
+    if (isValidURL(serviceUrl)) {
         const parts = serviceUrl.split(/\./g);
         // remove query params
         const ext = (parts[parts.length - 1] || '').split(/\?/g)[0];
         // from spec: Tileset files use the .json extension and the application/json MIME type.
-        return ext === 'json'
-            ? true
-            : false;
+        return ext === 'json';
     }
     return false;
 }
 
-const recordToLayer = (record) => {
+const recordToLayer = (record, options = {}) => {
     if (!record) {
         return null;
     }
     const { bbox, format, properties } = record;
+    // extract 'enableImageryOverlay' of mapOptions
+    const {enableImageryOverlay} = options;
     return {
         type: '3dtiles',
         url: record.url,
@@ -36,7 +36,8 @@ const recordToLayer = (record) => {
         visibility: true,
         ...(bbox && { bbox }),
         ...(format && { format }),
-        ...(properties && { properties })
+        ...(properties && { properties }),
+        ...(enableImageryOverlay && {enableImageryOverlay})
     };
 };
 
@@ -46,7 +47,7 @@ function getTitleFromUrl(url) {
 }
 
 const getRecords = (url, startPosition, maxRecords, text, info) => {
-    return getCapabilities(url)
+    return getCapabilities(url, info)
         .then(({ tileset, ...properties }) => {
             const records = [{
                 // current specification does not define the title location

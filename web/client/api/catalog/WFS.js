@@ -7,20 +7,15 @@
  */
 
 import { cleanAuthParamsFromURL } from '../../utils/SecurityUtils';
-import ConfigUtils from '../../utils/ConfigUtils';
 import { getRecordLinks, extractOGCServicesReferences } from '../../utils/CatalogUtils';
 
 import { getCapabilities, getCapabilitiesURL } from '../WFS';
-import xml2js from 'xml2js';
 import {
     validate as commonValidate,
     testService as commonTestService,
     preprocess as commonPreprocess
 } from './common';
 import { get, castArray, isEmpty } from 'lodash';
-
-const capabilitiesCache = {};
-
 
 const searchAndPaginate = (json = {}, startPosition, maxRecords, text) => {
 
@@ -75,13 +70,23 @@ const searchAndPaginate = (json = {}, startPosition, maxRecords, text) => {
     };
 };
 
-const recordToLayer = (record) => {
+const recordToLayer = (record, {
+    service
+}) => {
+    const {
+        layerOptions
+    } = service || {};
+    let security;
+    if (service?.protectedId) {
+        security = {sourceId: service?.protectedId, type: "basic"};
+    }
     return {
         type: record.type || "wfs",
         search: {
             url: record.url,
             type: "wfs"
         },
+        security,
         url: record.url,
         queryable: record.queryable,
         visibility: true,
@@ -90,27 +95,14 @@ const recordToLayer = (record) => {
         description: record.description || "",
         bbox: record.boundingBox,
         links: getRecordLinks(record),
-        ...record.layerOptions
+        ...record.layerOptions,
+        ...layerOptions
     };
 };
 
 export const getRecords = (url, startPosition, maxRecords, text, info) => {
-    const cached = capabilitiesCache[url];
-    if (cached && new Date().getTime() < cached.timestamp + (ConfigUtils.getConfigProp('cacheExpire') || 60) * 1000) {
-        return new Promise((resolve) => {
-            resolve(searchAndPaginate(cached.data, startPosition, maxRecords, text, info));
-        });
-    }
-    return getCapabilities(url).then((response) => {
-        let json;
-        xml2js.parseString(response.data, { explicitArray: false, stripPrefix: true }, (ignore, result) => {
-            json = { ...result, url };
-        });
-        capabilitiesCache[url] = {
-            timestamp: new Date().getTime(),
-            data: json
-        };
-        return searchAndPaginate(json, startPosition, maxRecords, text, info);
+    return getCapabilities(url, info).then((data) => {
+        return searchAndPaginate(data, startPosition, maxRecords, text, info);
     });
 };
 

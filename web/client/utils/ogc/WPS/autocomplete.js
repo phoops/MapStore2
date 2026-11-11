@@ -1,10 +1,8 @@
-// const wfsRequestBuilder = require('../WFS/RequestBuilder');
-// const {getFeature, property, query} = wfsRequestBuilder({wfsVersion: "1.1.0"});
-const {isFilterValid, toOGCFilterParts} = require('../../FilterUtils');
-const filterBuilder = require('../Filter/FilterBuilder');
+import  {isFilterValid, toOGCFilterParts} from '../../FilterUtils';
+import  filterBuilder from '../Filter/FilterBuilder';
 const {and} = filterBuilder({});
 
-const getWpsPayload = ({layerName, layerFilter, attribute, maxFeatures, startIndex, value}) => {
+export const getWpsPayload = ({layerName, layerFilter, attribute, maxFeatures, startIndex, value, sortByAttribute, sortOrder}) => {
     const attributeFilterObj = value
         ? '<ogc:PropertyIsLike matchCase="false" wildCard="*" singleChar="." escapeChar="!">'
     + '   <ogc:PropertyName>' + attribute + '</ogc:PropertyName>'
@@ -22,6 +20,12 @@ const getWpsPayload = ({layerName, layerFilter, attribute, maxFeatures, startInd
     + '</ogc:Filter>'
         : '';
 
+    // TODO: new support for sortByAttribute and sortOrder in WPS, working logically but recheck again
+    // Use sortByAttribute if provided, otherwise fall back to attribute
+    const sortAttribute = sortByAttribute ?? attribute;
+    // Use sortOrder if provided, otherwise default to ASC
+    const sortOrderValue = sortOrder ?? 'ASC';
+
     let requestBody =
       '<wps:Execute xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0.0" service="WPS" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd"> '
     + ' <ows:Identifier xmlns:ows="http://www.opengis.net/ows/1.1">gs:PagedUnique</ows:Identifier> '
@@ -37,7 +41,8 @@ const getWpsPayload = ({layerName, layerFilter, attribute, maxFeatures, startInd
     + filter
     + '             <ogc:SortBy xmlns:ogc="http://www.opengis.net/ogc">'
     + '               <ogc:SortProperty>'
-    + '                 <ogc:PropertyName>' + attribute + '</ogc:PropertyName>'
+    + '                 <ogc:PropertyName>' + sortAttribute + '</ogc:PropertyName>'
+    + (sortOrderValue === 'DESC' ? '<ogc:SortOrder>DESC</ogc:SortOrder>' : '')
     + '               </ogc:SortProperty>'
     + '             </ogc:SortBy>'
     + '           </wfs:Query>'
@@ -76,6 +81,6 @@ const getWpsPayload = ({layerName, layerFilter, attribute, maxFeatures, startInd
     return requestBody;
 };
 
-module.exports = {
+export default {
     getWpsPayload
 };

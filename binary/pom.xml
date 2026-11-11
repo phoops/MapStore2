@@ -1,10 +1,9 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>it.geosolutions.mapstore</groupId>
         <artifactId>mapstore-root</artifactId>
-        <version>1.7.1</version>
+        <version>1.11.0</version>
     </parent>
     <groupId>it.geosolutions.mapstore</groupId>
     <artifactId>mapstore-binary</artifactId>
@@ -14,7 +13,7 @@
     <url>http://www.geo-solutions.it</url>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <tomcat.version>8.5.96</tomcat.version>
+        <tomcat.version>9.0.116</tomcat.version>
         <binary.number>${mapstore2.version}</binary.number>
     </properties>
     <dependencies>
@@ -94,6 +93,7 @@
             <version>${tomcat.version}</version>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>
@@ -114,15 +114,13 @@
                         <id>get-untar-jre-copy-db</id>
                         <phase>package</phase>
                         <configuration>
-                            <tasks>
-                                <echo message="Downloading JRE..."/>
-                                <get src="https://www.dropbox.com/scl/fi/2rjaso3cxgab0jdjxwpjr/jre.tar.gz?rlkey=1wrf6mcemn5d2e88t8u0wxbk3&amp;dl=1"
-                                     dest="${project.build.directory}/jre.tar.gz"/>
-                                <echo message="Untar JRE..."/>
-                                <gunzip src="${project.build.directory}/jre.tar.gz"
-                                        dest="${project.build.directory}/jre.tar"/>
-                                <untar src="${project.build.directory}/jre.tar" dest="${project.build.directory}/jre"/>
-                            </tasks>
+                            <target>
+                                <echo message="Downloading JRE..." />
+                                <get src="https://maven.geo-solutions.it/jdk/17.0.13/jdk_17.0.13.tar.gz" dest="${project.build.directory}/jre.tar.gz" />
+                                <echo message="Untar JRE..." />
+                                <gunzip src="${project.build.directory}/jre.tar.gz" dest="${project.build.directory}/jre.tar" />
+                                <untar src="${project.build.directory}/jre.tar" dest="${project.build.directory}/jre" />
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -132,36 +130,14 @@
                         <phase>package</phase>
                         <configuration>
                             <!-- remove some unwanted dependencies that get pulled over -->
-                            <tasks>
+                            <target>
                                 <delete>
-                                    <fileset dir="${project.build.directory}/dependency"
-                                             includes="servlet-api-*.jar,core*.jar"/>
+                                    <fileset dir="${project.build.directory}/dependency" includes="servlet-api-*.jar,core*.jar" />
                                 </delete>
-                            </tasks>
+                            </target>
                         </configuration>
                         <goals>
                             <goal>run</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- artifact assembly -->
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.1</version>
-                <configuration>
-                    <descriptors>
-                        <descriptor>bin.xml</descriptor>
-                    </descriptors>
-                    <finalName>mapstore2-${binary.number}</finalName>
-                    <outputDirectory>${project.build.directory}</outputDirectory>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>single</goal>
                         </goals>
                     </execution>
                 </executions>

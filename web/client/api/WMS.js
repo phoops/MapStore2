@@ -7,7 +7,7 @@
  */
 
 import urlUtil from 'url';
-import { isArray, castArray, get } from 'lodash';
+import { uniq, isArray, castArray, get } from 'lodash';
 import xml2js from 'xml2js';
 import axios from '../libs/ajax';
 import { getConfigProp } from '../utils/ConfigUtils';
@@ -92,6 +92,13 @@ export const flatLayers = (root) => {
         : rootName && [root] || [];
 };
 
+const getFormats = (response) => {
+    const root = response.Capability;
+    const imageFormats = castArray(root?.Request?.GetMap?.Format || []).filter(isValidGetMapFormat);
+    const infoFormats = castArray(root?.Request?.GetFeatureInfo?.Format || []).filter(isValidGetFeatureInfoFormat);
+    return { imageFormats, infoFormats };
+};
+
 export const getOnlineResource = (c) => {
     return c.Request && c.Request.GetMap && c.Request.GetMap.DCPType && c.Request.GetMap.DCPType.HTTP && c.Request.GetMap.DCPType.HTTP.Get && c.Request.GetMap.DCPType.HTTP.Get.OnlineResource && c.Request.GetMap.DCPType.HTTP.Get.OnlineResource.$ || undefined;
 };
@@ -99,7 +106,7 @@ export const searchAndPaginate = (json = {}, startPosition, maxRecords, text) =>
     const root = json.Capability;
     const service = json.Service;
     const onlineResource = getOnlineResource(root);
-    const SRSList = root.Layer && (root.Layer.SRS || root.Layer.CRS)?.map((crs) => crs.toUpperCase()) || [];
+    const SRSList = root.Layer && castArray(root.Layer.SRS || root.Layer.CRS || [])?.map((crs) => crs.toUpperCase()) || [];
     const credits = root.Layer && root.Layer.Attribution && extractCredits(root.Layer.Attribution);
     const getMapFormats = castArray(root?.Request?.GetMap?.Format || []);
     const getFeatureInfoFormats = castArray(root?.Request?.GetFeatureInfo?.Format || []);
@@ -117,14 +124,18 @@ export const searchAndPaginate = (json = {}, startPosition, maxRecords, text) =>
         },
         records: filteredLayers
             .filter((layer, index) => index >= startPosition - 1 && index < startPosition - 1 + maxRecords)
-            .map((layer) => ({
-                ...layer,
-                getMapFormats,
-                getFeatureInfoFormats,
-                onlineResource,
-                SRS: SRSList,
-                credits: layer.Attribution ? extractCredits(layer.Attribution) : credits
-            }))
+            .map((layer) => {
+                // WMS spec, chapter 7.1.4.7 (WMS 1.1.1) / 7.2.4.8 (WMS 1.3.0) (inheritance of layer properties) says about CRS/SRS properties: child inherits any value(s) supplied by parent and adds any values of its own.
+                const CRSLIST = uniq(SRSList.concat(castArray(layer.SRS || layer.CRS || [])?.map((crs) => crs.toUpperCase()) || []));
+                return {
+                    ...layer,
+                    getMapFormats,
+                    getFeatureInfoFormats,
+                    onlineResource,
+                    SRS: CRSLIST,
+                    credits: layer.Attribution ? extractCredits(layer.Attribution) : credits
+                };
+            })
     };
 };
 
@@ -148,12 +159,12 @@ export const getDimensions = (layer) => {
  * - `Capability`: capability object that contains layers and requests formats
  * - `Service`: service information object
  */
-export const getCapabilities = (url) => {
+export const getCapabilities = (url, {headers, params, _msAuthSourceId} = {}) => {
     return axios.get(parseUrl(url, {
         service: "WMS",
         version: WMS_GET_CAPABILITIES_VERSION,
         request: "GetCapabilities"
-    })).then((response) => {
+    }), {headers, params, _msAuthSourceId}).then((response) => {
         let json;
         xml2js.parseString(response.data, {explicitArray: false}, (ignore, result) => {
             json = result;
@@ -184,14 +195,15 @@ export const describeLayer = (url, layer, options = {}) => {
         };
     });
 };
-export const getRecords = (url, startPosition, maxRecords, text) => {
+export const getRecords = (url, startPosition, maxRecords, text, options) => {
     const cached = capabilitiesCache[url];
     if (cached && new Date().getTime() < cached.timestamp + (getConfigProp('cacheExpire') || 60) * 1000) {
         return new Promise((resolve) => {
             resolve(searchAndPaginate(cached.data, startPosition, maxRecords, text));
         });
     }
-    return getCapabilities(url)
+    const protectedId = options?.options?.service?.protectedId;
+    return getCapabilities(url, {_msAuthSourceId: protectedId})
         .then((json) => {
             capabilitiesCache[url] = {
                 timestamp: new Date().getTime(),
@@ -200,20 +212,20 @@ export const getRecords = (url, startPosition, maxRecords, text) => {
             return searchAndPaginate(json, startPosition, maxRecords, text);
         });
 };
-export const describeLayers = (url, layers) => {
+export const describeLayers = (url, layers, security) => {
     return axios.get(parseUrl(url, {
         service: "WMS",
         version: WMS_DESCRIBE_LAYER_VERSION,
         layers: layers,
         request: "DescribeLayer"
-    })).then((response) => {
-        let decriptions;
+    }), {_msAuthSourceId: security?.sourceId}).then((response) => {
+        let descriptions;
         xml2js.parseString(response.data, {explicitArray: false}, (ignore, result) => {
-            decriptions = result && result.WMS_DescribeLayerResponse && result.WMS_DescribeLayerResponse.LayerDescription;
+            descriptions = result && result.WMS_DescribeLayerResponse && result.WMS_DescribeLayerResponse.LayerDescription;
         });
-        decriptions = Array.isArray(decriptions) ? decriptions : [decriptions];
+        descriptions = Array.isArray(descriptions) ? descriptions : [descriptions];
         // make it compatible with json format of describe layer
-        return decriptions.map(desc => ({
+        return descriptions.map(desc => ({
             ...(desc && desc.$ || {}),
             layerName: desc && desc.$ && desc.$.name,
             query: {
@@ -222,13 +234,13 @@ export const describeLayers = (url, layers) => {
         }));
     });
 };
-export const textSearch = (url, startPosition, maxRecords, text) => {
-    return getRecords(url, startPosition, maxRecords, text);
+export const textSearch = (url, startPosition, maxRecords, text, options) => {
+    return getRecords(url, startPosition, maxRecords, text, options);
 };
 export const parseLayerCapabilities = (json, layer) => {
     const root = json.Capability;
     const layersCapabilities = flatLayers(root);
-    return layersCapabilities.find((layerCapability) => {
+    const capabilities = layersCapabilities.find((layerCapability) => {
         const capabilityName = layerCapability.Name;
         if (layer.name.split(":").length === 2 && capabilityName && capabilityName.split(":").length === 2) {
             return layer.name === capabilityName && layerCapability;
@@ -241,6 +253,17 @@ export const parseLayerCapabilities = (json, layer) => {
         }
         return layer.name === capabilityName && layerCapability;
     });
+    if (capabilities) {
+        const { imageFormats, infoFormats } = getFormats(json);
+        return {
+            ...capabilities,
+            layerOptions: {
+                imageFormats,
+                infoFormats
+            }
+        };
+    }
+    return null;
 };
 export const getBBox = (record, bounds) => {
     let layer = record;
@@ -294,15 +317,23 @@ export const reset = () => {
 export const getSupportedFormat = (url, includeGFIFormats = false) => {
     return getCapabilities(url)
         .then((response) => {
-            const root = response.Capability;
-            const imageFormats = castArray(root?.Request?.GetMap?.Format || []).filter(isValidGetMapFormat);
+            const { imageFormats, infoFormats } = getFormats(response);
             if (includeGFIFormats) {
-                const infoFormats = castArray(root?.Request?.GetFeatureInfo?.Format || []).filter(isValidGetFeatureInfoFormat);
                 return { imageFormats, infoFormats };
             }
             return imageFormats;
         })
         .catch(() => includeGFIFormats ? { imageFormats: [], infoFormats: [] } : []);
+};
+
+export const getJsonWMSLegend = (url) => {
+    return axios.get(url)
+        .then((response) => {
+            if (typeof response?.data === 'string' && response.data.includes("Exception")) {
+                throw new Error("Faild to get json legend");
+            }
+            return response?.data?.Legend || [];
+        }).catch(err => { throw err; });
 };
 
 const Api = {

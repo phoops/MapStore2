@@ -14,7 +14,9 @@ import Message from '../../../I18N/Message';
 import FileDrop from '../../forms/FileDrop';
 import Metadata from '../../forms/Metadata';
 import Thumbnail from '../../forms/Thumbnail';
-
+/**
+ * @deprecated
+ */
 class MainForm extends React.Component {
     render() {
         /* eslint-disable */
@@ -36,7 +38,7 @@ class MainForm extends React.Component {
         } = this.props;
         /* eslint-enable */
         return (<Row>
-            {enableFileDrop && <Col xs={12}>
+            {enableFileDrop && <Col xs={12} className="main-form-item">
                 <FileDrop
                     acceptedFileName={acceptedDropFileName}
                     label={fileDropLabel}
@@ -47,7 +49,7 @@ class MainForm extends React.Component {
                     onClear={onFileDropClear}
                     onError={onError}/>
             </Col>}
-            <Col xs={12}>
+            <Col xs={12} className="main-form-item">
                 <Thumbnail
                     resource={resource}
                     thumbnail={
@@ -62,7 +64,7 @@ class MainForm extends React.Component {
                         tail: `/raw?decode=datauri&v=${uuid()}`
                     })} />
             </Col>
-            <Col xs={12}>
+            <Col xs={12} className="main-form-item">
                 <Metadata role="body" ref="mapMetadataForm"
                     onChange={onUpdate}
                     resource={resource}

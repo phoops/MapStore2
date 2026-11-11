@@ -5,7 +5,6 @@
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import assign from 'object-assign';
 import { get } from 'ol/proj';
 import TileGrid from 'ol/tilegrid/TileGrid';
 
@@ -19,6 +18,21 @@ import { getResolutionsForProjection } from '../MapUtils';
 import { generateEnvString } from '../LayerLocalizationUtils';
 import { getTileGridFromLayerOptions } from '../WMSUtils';
 
+
+function hasHttpProtocol(givenUrl = '') {
+    if (window?.location?.protocol === 'https:') {
+        if (givenUrl.indexOf('http') === 0) {
+            const givenUrlObject = new URL(givenUrl);
+            return givenUrlObject.protocol === 'http:';
+        }
+        if (givenUrl.indexOf('/') === 0) {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
 /**
  * Check source and apply proxy
  * when `forceProxy` is set on layer options
@@ -27,8 +41,9 @@ import { getTileGridFromLayerOptions } from '../WMSUtils';
  * @returns {string}
  */
 export const proxySource = (forceProxy, src) => {
+    const _forceProxy = forceProxy || hasHttpProtocol(src);
     let newSrc = src;
-    if (forceProxy && needProxy(src)) {
+    if (_forceProxy && needProxy(src)) {
         let proxyUrl = getProxyUrl();
         newSrc = proxyUrl + encodeURIComponent(src);
     }
@@ -48,7 +63,7 @@ export const toOLAttributions = credits => credits && creditsToAttribution(credi
 export function wmsToOpenlayersOptions(options) {
     const params = optionsToVendorParams(options);
     // NOTE: can we use opacity to manage visibility?
-    const result = assign({}, options.baseParams, {
+    const result = Object.assign({}, options.baseParams, {
         LAYERS: options.name,
         STYLES: options.style || "",
         FORMAT: options.format || 'image/png',
@@ -57,7 +72,7 @@ export function wmsToOpenlayersOptions(options) {
         CRS: CoordinatesUtils.normalizeSRS(options.srs || 'EPSG:3857', options.allowedSRS),
         ...getWMSVendorParams(options),
         VERSION: options.version || "1.3.0"
-    }, assign(
+    }, Object.assign(
         {},
         (options._v_ ? {_v_: options._v_} : {}),
         (params || {}),

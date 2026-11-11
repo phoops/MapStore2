@@ -16,7 +16,6 @@ import htmlToDraft from 'html-to-draftjs';
 import localizedProps from '../misc/enhancers/localizedProps';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
-import assign from 'object-assign';
 import uuidv1 from 'uuid/v1';
 import {pick, omit, get, keys, isNumber, isBoolean} from 'lodash';
 import Message from '../I18N/Message';
@@ -119,7 +118,7 @@ export default class BackgroundDialog extends React.Component {
         const contentBlock = htmlToDraft(creditsTitleHtml);
         const contentState = ContentState.createFromBlockArray(contentBlock.contentBlocks);
         const editorState = EditorState.createWithContent(contentState);
-        const newState = assign({}, pickedProps, {additionalParameters: this.assignParameters(this.props.additionalParameters), editorState});
+        const newState = Object.assign({}, pickedProps, {additionalParameters: this.assignParameters(this.props.additionalParameters), editorState});
         this.state = newState;
     }
 
@@ -170,7 +169,11 @@ export default class BackgroundDialog extends React.Component {
                         onChange={event => this.setState({ format: event && event.value })}
                         value={this.state.format || this.props.defaultFormat}
                         clearable
-                        options={this.props.formatOptions}
+                        isLoading={!this.props.capabilities}
+                        options={
+                            (this.props.capabilities?.capabilities?.layerOptions?.imageFormats || this.props.formatOptions || [])
+                                .map((format) => format?.value ? format : ({ value: format, label: format }))
+                        }
                     />
                 </FormGroup>
                 {this.renderStyleSelector()}
@@ -186,7 +189,7 @@ export default class BackgroundDialog extends React.Component {
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <ControlLabel style={{ flex: 1 }}><Message msgId="backgroundDialog.additionalParameters" /></ControlLabel>
                         <Button
-                            className="square-button-md"
+                            className="square-button"
                             tooltipId="backgroundDialog.addAdditionalParameterTooltip"
                             style={{ borderColor: 'transparent' }}
                             onClick={() => {
@@ -235,7 +238,7 @@ export default class BackgroundDialog extends React.Component {
                                 additionalParameters: this.state.additionalParameters.filter((aa) => val.id !== aa.id)
                             })}
                             tooltipId="backgroundDialog.removeAdditionalParameterTooltip"
-                            className="square-button-md"
+                            className="square-button"
                             style={{ borderColor: 'transparent' }}>
                             <Glyphicon glyph="trash" />
                         </Button>
@@ -281,7 +284,6 @@ export default class BackgroundDialog extends React.Component {
             fitContent
             title={<Message msgId={this.props.editing ? 'backgroundDialog.editTitle' : 'backgroundDialog.addTitle'}/>}
             show
-            fade
             clickOutEnabled={false}
             bodyClassName="ms-flex modal-properties-container background-dialog"
             loading={this.props.loading}
@@ -296,10 +298,10 @@ export default class BackgroundDialog extends React.Component {
                         const format = this.state.format || this.props.defaultFormat;
                         const creditsTitle = draftToHtml(convertToRaw(this.state.editorState.getCurrentContent()));
                         this.props.updateThumbnail(this.state.thumbnail.data, backgroundId);
-                        this.props.onSave(assign({}, this.props.layer, omit(this.state, 'thumbnail'), this.props.editing ? {} : {id: backgroundId},
+                        this.props.onSave(Object.assign({}, this.props.layer, omit(this.state, 'thumbnail'), this.props.editing ? {} : {id: backgroundId},
                             {
                                 params: omit(
-                                    this.state.additionalParameters.reduce((accum, p) => assign(accum, {[p.param]: p.val}), {}),
+                                    this.state.additionalParameters.reduce((accum, p) => Object.assign(accum, {[p.param]: p.val}), {}),
                                     ['source', 'title']
                                 ),
                                 format,
@@ -379,7 +381,7 @@ export default class BackgroundDialog extends React.Component {
                     } else {
                         modifiedKey = event;
                     }
-                    return assign({}, v, {[key]: modifiedKey, type});
+                    return Object.assign({}, v, {[key]: modifiedKey, type});
                 }
                 return v;
             })

@@ -35,6 +35,7 @@ import {set} from '../../utils/ImmutableUtils';
 import OverlayTrigger from '../misc/OverlayTrigger';
 import ResizableModal from '../misc/ResizableModal';
 import { MapLibraries } from '../../utils/MapTypeUtils';
+import Portal from '../misc/Portal';
 
 /**
  * SharePanel allow to share the current map in some different ways.
@@ -98,7 +99,8 @@ class SharePanel extends React.Component {
         addMarker: PropTypes.func,
         viewerOptions: PropTypes.object,
         mapType: PropTypes.string,
-        updateMapView: PropTypes.func
+        updateMapView: PropTypes.func,
+        onClearShareResource: PropTypes.func
     };
 
     static defaultProps = {
@@ -118,7 +120,8 @@ class SharePanel extends React.Component {
         isScrollPosition: false,
         hideMarker: () => {},
         addMarker: () => {},
-        updateMapView: () => {}
+        updateMapView: () => {},
+        onClearShareResource: () => {}
     };
 
     static contextTypes = {
@@ -181,6 +184,9 @@ class SharePanel extends React.Component {
                 markerEnabled: !this.props.settings.markerEnabled
             });
         }
+    }
+    componentWillUnmount() {
+        this.props.onClearShareResource();
     }
 
     initializeDefaults = (props) => {
@@ -295,7 +301,7 @@ class SharePanel extends React.Component {
         </Tabs>);
         const hideInTabs = this.getHideIntabs(itemTabs);
         let sharePanel =
-            (<ResizableModal
+            (<Portal><ResizableModal
                 id={this.props.modal ? "share-panel-dialog-modal" : "share-panel-dialog"}
                 title={getMessageById(this.context.messages, "share.title")}
                 dialogClassName=" share-win"
@@ -311,7 +317,7 @@ class SharePanel extends React.Component {
                         && this.renderAdvancedSettings()
                     }
                 </div>
-            </ResizableModal>);
+            </ResizableModal></Portal>);
         return sharePanel;
     }
 

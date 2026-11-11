@@ -8,8 +8,6 @@
 
 import expect from 'expect';
 
-import assign from 'object-assign';
-
 import {
     isFeatureGridOpen,
     hasChangesSelector,
@@ -31,7 +29,6 @@ import {
     canEditSelector,
     showAgainSelector,
     hasSupportedGeometry,
-    getDockSize,
     selectedLayerNameSelector,
     queryOptionsSelector,
     showTimeSync,
@@ -42,7 +39,8 @@ import {
     isFilterByViewportSupported,
     selectedLayerFieldsSelector,
     editingAllowedGroupsSelector,
-    isEditingAllowedSelector
+    isEditingAllowedSelector,
+    hasNoGeometry
 } from '../featuregrid';
 
 const idFt1 = "idFt1";
@@ -324,7 +322,7 @@ let initialState = {
 
 describe('Test featuregrid selectors', () => {
     afterEach(() => {
-        initialState = assign({}, initialState, {
+        initialState = Object.assign({}, initialState, {
             featuregrid: {
                 open: true,
                 saving: false,
@@ -463,7 +461,7 @@ describe('Test featuregrid selectors', () => {
 
     it('test hasSupportedGeometry', () => {
         expect(hasSupportedGeometry(initialState)).toBe(true);
-        let initialStateWithGmlGeometry = assign({}, initialState);
+        let initialStateWithGmlGeometry = Object.assign({}, initialState);
         initialStateWithGmlGeometry.query.featureTypes['editing:polygons.test'].original.featureTypes[0].properties[1].type = 'gml:Geometry';
         initialStateWithGmlGeometry.query.featureTypes['editing:polygons.test'].original.featureTypes[0].properties[1].localType = 'Geometry';
         expect(hasSupportedGeometry(initialStateWithGmlGeometry)).toBe(false);
@@ -474,11 +472,6 @@ describe('Test featuregrid selectors', () => {
         initialStateWithGmlGeometry.query.featureTypes['editing:polygons.test'].original.featureTypes[0].properties[1].localType = 'Polygon';
         expect(hasSupportedGeometry(initialStateWithGmlGeometry)).toBe(true);
 
-    });
-
-    it('test getDockSize', () => {
-        expect(getDockSize({ featuregrid: {dockSize: 0.5} })).toBe(0.5);
-        expect(getDockSize({})).toBe(undefined);
     });
 
     it('showTimeSync', () => {
@@ -794,6 +787,36 @@ describe('Test featuregrid selectors', () => {
                     }
                 }
             })).toBeTruthy();
+        });
+    });
+    describe('hasNoGeometry', () => {
+        it('returns false when describe metadata has geometry', () => {
+            expect(hasNoGeometry(initialState)).toBe(false);
+        });
+        it('returns false when features contain geometry and no describe metadata', () => {
+            const state = {
+                featuregrid: {
+                    features: [{
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [0, 0]
+                        }
+                    }]
+                }
+            };
+            expect(hasNoGeometry(state)).toBe(false);
+        });
+        it('returns true when neither describe metadata nor features expose geometry', () => {
+            const state = {
+                featuregrid: {
+                    features: [{
+                        type: 'Feature',
+                        geometry: null
+                    }]
+                }
+            };
+            expect(hasNoGeometry(state)).toBe(true);
         });
     });
 });
